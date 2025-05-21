@@ -340,7 +340,7 @@ export default class GameScene extends Phaser.Scene {
     playerCollideWithEnemy(player, enemy) {
         if (!player.active || !enemy.active) return;
         player.takeDamage(15);
-        const enemyDiedFromCollision = enemy.takeHit(1000);     
+        const enemyDiedFromCollision = enemy.takeHit(1000);         
 
         if (enemyDiedFromCollision > 0 && this.currentWaveData && !(this.boss && this.boss.active) && !this.bossSpawned) {
             if (this.currentWaveData.type === 'kill_count') {

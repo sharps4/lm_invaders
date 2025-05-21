@@ -5,6 +5,7 @@
       "name": "Léo",
       "spriteKey": "player_leo", 
       "bulletSpriteKey": "bullet_leo",
+      "description": "Aime les femmes d'age mûr et CSGO",
       "baseStats": {
         "hp": 100,
         "speed": 300,
