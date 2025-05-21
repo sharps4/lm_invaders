@@ -1,0 +1,110 @@
+{
+  "characters": [
+    {
+      "id": "leo",
+      "name": "Léo",
+      "spriteKey": "player_leo", 
+      "bulletSpriteKey": "bullet_leo",
+      "baseStats": {
+        "hp": 100,
+        "speed": 300,
+        "shootCooldown": 300
+      },
+      "skills": [
+        {
+          "id": "gif_calin",
+          "name": "Gif Câlin",
+          "description": "Choque tous les ennemis qui ne peuvent plus bouger et attaquer pendant 5sec.",
+          "cooldown": 20000, 
+          "duration": 5000,
+          "type": "aoe_stun" 
+        },
+        {
+          "id": "analyse",
+          "name": "Analyse",
+          "description": "Léo analyse les ennemis, reçoit 30% de dégâts en moins pendant 10sec.",
+          "cooldown": 30000,
+          "duration": 10000,
+          "effect": { "damageReduction": 0.3 }, 
+          "type": "self_buff"
+        }
+      ]
+    },
+    {
+      "id": "constantin",
+      "name": "Constantin",
+      "spriteKey": "player_constantin",
+      "bulletSpriteKey": "bullet_constantin",
+      "baseStats": {
+        "hp": 120,
+        "speed": 280,
+        "shootCooldown": 350
+      },
+      "skills": [
+      ]
+    }
+  ],
+  "bosses": [
+    {
+      "id": "clementine",
+      "name": "Clémentine",
+      "spriteKey": "boss_clementine",
+      "hp": 500,
+      "scoreValue": 1000, 
+      "movement": {        
+        "type": "patrol_horizontal",  
+        "speed": 80,
+        "patrolDistance": 200
+      },
+      "phases": [          
+        {
+          "hpThreshold": 1,
+          "attacks": [
+            {
+              "id": "pause_cafe_spray",
+              "name": "Pause Café (Rafale)",
+              "type": "projectile_spray",
+              "cooldown": 3000,
+              "projectileSpriteKey": "coffee_cup",
+              "projectileSpeed": 250,
+              "projectileCount": 5,
+              "spreadAngle": 60,
+              "damage": 10
+            },
+            {
+              "id": "cafe_slam",
+              "name": "Giga Tasse de Café",
+              "type": "special_projectile_large",
+              "cooldown": 10000,
+              "projectileSpriteKey": "giga_coffee_cup",
+              "projectileSpeed": 150,
+              "damage": 30,
+              "effect": "area_slow"
+            }
+          ]
+        }
+      ],
+      "passive": null 
+    }
+  ],
+  "worlds": [
+    {
+      "id": "cafeteria",
+      "name": "Monde 1: Cafétéria",
+      "waves": [
+        { "type": "kill_count", "enemyType": "cliche_iceberg_1", "count": 3, "spawnDelay": 800 },
+        { "type": "timed_survival", "duration": 15000, "enemyType": "cliche_iceberg_1", "spawnInterval": 2000, "enemiesPerInterval": 1 }, 
+        { "type": "boss_fight", "bossId": "clementine" }
+      ],
+      "bossId": "clementine" 
+    }
+  ],
+  "enemies": {
+    "cliche_iceberg_1": {
+      "spriteKey": "enemy_cliche1",
+      "hp": 20,
+      "speed": 50,
+      "scoreValue": 10
+    }
+  }
+}
