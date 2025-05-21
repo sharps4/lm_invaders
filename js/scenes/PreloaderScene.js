@@ -37,7 +37,8 @@ export default class PreloaderScene extends Phaser.Scene {
 
         this.load.json('gameData', 'assets/data/gameData.json');
 
-        this.load.image('player_leo', 'assets/images/player_leo.png');
+        this.load.image('leo_portrait', 'assets/images/leo_portrait.png');
+        // this.load.image('leo_full_body', 'assets/images/leo_full_body.png');
 
         // this.createPlaceholderTexture('player_leo', 32, 32, '#00FF00');
         this.createPlaceholderTexture('bullet_leo', 8, 16, '#FFFF00');  

@@ -3,7 +3,8 @@
     {
       "id": "leo",
       "name": "Léo",
-      "spriteKey": "player_leo", 
+      "spriteKey": "leo_full_body", 
+      "portraitKey": "leo_portrait",
       "bulletSpriteKey": "bullet_leo",
       "description": "Aime les femmes d'age mûr et CSGO",
       "baseStats": {
@@ -34,7 +35,8 @@
     {
       "id": "constantin",
       "name": "Constantin",
-      "spriteKey": "player_constantin",
+      "spriteKey": "constantin_full_body", 
+      "portraitKey": "constantin_portrait",
       "bulletSpriteKey": "bullet_constantin",
       "baseStats": {
         "hp": 120,
