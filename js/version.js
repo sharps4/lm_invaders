@@ -1,0 +1,1 @@
+export const GAME_VERSION = "Alpha 0.2.0"; 
