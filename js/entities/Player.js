@@ -5,6 +5,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         super(scene, x, y, playerData.spriteKey); 
 
         this.playerData = playerData; 
+        this.scene = scene;
 
         scene.add.existing(this);
         scene.physics.add.existing(this);
@@ -22,10 +23,14 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.skills = playerData.skills.map(skillData => ({
             ...skillData, 
             lastUsedTime: 0,
-            isActive: false
+            isActive: false,
+            activationTime: 0,
         }));
 
         this.damageReductionFactor = 0; 
+
+        this.upperMoveLimit = this.scene.cameras.main.height / 2;
+        this.lowerMoveLimit = this.scene.cameras.main.height - (this.displayHeight / 2) - 10;
 
         scene.add.existing(this); 
 
@@ -34,7 +39,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    update(cursors, shootKey, skillKeys, time) { 
+    update(cursors, shootKey, skillKeys, time) {
         if (!this.active) return;
 
         this.setVelocityX(0);
@@ -42,6 +47,23 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
             this.setVelocityX(-this.speed);
         } else if (cursors.right.isDown) {
             this.setVelocityX(this.speed);
+        }
+
+        this.setVelocityY(0); 
+        if (cursors.up.isDown) {
+            if (this.y - (this.displayHeight / 2) > this.upperMoveLimit) {
+                this.setVelocityY(-this.speed);
+            } else {
+                this.setVelocityY(0); 
+                this.y = this.upperMoveLimit + (this.displayHeight / 2); 
+            }
+        } else if (cursors.down.isDown) {
+             if (this.y + (this.displayHeight / 2) < this.scene.cameras.main.height - 10) { 
+                this.setVelocityY(this.speed);
+            } else {
+                this.setVelocityY(0); 
+                this.y = this.scene.cameras.main.height - (this.displayHeight / 2) - 10; 
+            }
         }
 
         if (shootKey.isDown && time > this.lastShotTime + this.shootCooldown) {
