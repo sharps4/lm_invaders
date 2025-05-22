@@ -21,7 +21,6 @@ export default class Boss extends Phaser.Physics.Arcade.Sprite {
         this.setActive(true);
         this.setVisible(true);
 
-        this.currentPhaseData = null;
         this.activeAttacks = []; 
 
         this.playerTarget = this.scene.player; 
@@ -33,6 +32,17 @@ export default class Boss extends Phaser.Physics.Arcade.Sprite {
         this.nextMoveTime = 0; 
 
         this.setupMovement();
+
+        if (bossData.attacks && Array.isArray(bossData.attacks)) {
+            this.activeAttacks = bossData.attacks.map(attack => ({
+                ...attack,
+                lastUsedTime: 0 
+            }));
+        } else {
+            this.activeAttacks = [];
+            console.warn(`Boss ${this.bossData.name} n'a pas d'attaques définies dans gameData.json!`);
+        }
+        console.log(`${this.bossData.name} active attacks:`, this.activeAttacks);
 
         if (this.projectileGroup && this.playerTarget) {
             if (!this.scene.physics.world.colliders.getActive().find(c => c.object1 === this.projectileGroup && c.object2 === this.playerTarget)) {
@@ -117,12 +127,18 @@ export default class Boss extends Phaser.Physics.Arcade.Sprite {
     }
 
     tryToUseSkills(time) {
-        if (!this.active || !this.currentPhaseData) return;
+        if (!this.active || !this.activeAttacks || this.activeAttacks.length === 0) {
+            console.log("Boss not active or no attacks defined, skipping skills.");
+            return;
+        }
+        console.log(`Boss trying to use skills at time: ${time}`);
 
         this.activeAttacks.forEach(attack => {
+            console.log(`Checking attack: ${attack.id}, LastUsed: ${attack.lastUsedTime}, Cooldown: ${attack.cooldown}, Ready in: ${ (attack.lastUsedTime + attack.cooldown) - time }`);
             if (time > attack.lastUsedTime + attack.cooldown) {
+                console.log(`Attempting to perform skill: ${attack.id}`);
                 this.performSkill(attack, time);
-                attack.lastUsedTime = time; 
+                attack.lastUsedTime = time;
             }
         });
     }

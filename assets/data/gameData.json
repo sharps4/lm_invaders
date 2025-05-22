@@ -6,7 +6,7 @@
       "spriteKey": "leo_full_body", 
       "portraitKey": "leo_portrait",
       "bulletSpriteKey": "bullet_leo",
-      "description": "Aime les femmes d'age mûr et CSGO",
+      "description": "L'homme aux mille mensonges, de la nièce à Poutine jusqu'au contrat Porsche, on ne sait plus où donner de la tête. L'homme aux mille paradoxes, il est capable de baiser toutes les femmes de la Terre mais n'arrive pas à passer son permis boîte auto du premier coup. Il peut gérer une équipe E-SPORT mais n'arrive pas à faire son rôle de délégué. ",
       "baseStats": {
         "hp": 100,
         "speed": 300,
@@ -19,7 +19,8 @@
           "description": "Choque tous les ennemis qui ne peuvent plus bouger et attaquer pendant 5sec.",
           "cooldown": 20000, 
           "duration": 5000,
-          "type": "aoe_stun" 
+          "type": "aoe_stun",
+          "iconKey": "skill_icon_gif_calin"
         },
         {
           "id": "analyse",
@@ -28,22 +29,70 @@
           "cooldown": 30000,
           "duration": 10000,
           "effect": { "damageReduction": 0.3 }, 
-          "type": "self_buff"
+          "type": "self_buff",
+          "iconKey": "skill_icon_analyse"
         }
       ]
     },
     {
-      "id": "constantin",
-      "name": "Constantin",
-      "spriteKey": "constantin_full_body", 
-      "portraitKey": "constantin_portrait",
-      "bulletSpriteKey": "bullet_constantin",
+      "id": "thomas",
+      "name": "Thomas",
+      "spriteKey": "thomas_full_body", 
+      "portraitKey": "thomas_portrait",
+      "bulletSpriteKey": "bullet_thomas",
+      "description": "Le robot humanoïde originel, sa droiture n'a d'égal que l'Enderman. Capable des pires vices pour défendre sa bien-aimée Julie Verdier Fiot, plus connue sous le nom de Jujufinote. Il s'arme de VSCode pour annihiler ses ennemis. Sa kryptonite, c'est le casino et les coups dans les côtes. Restez sur vos gardes : quand vous voyez ce visage, fuyez... ou mourez dans d'atroces souffrances.",
       "baseStats": {
         "hp": 120,
         "speed": 280,
         "shootCooldown": 350
       },
       "skills": [
+        {
+          "id": "homme_timide",
+          "name": "L’homme timide",
+          "description": "Devient invisible pendant 3sec",
+          "cooldown": 20000, 
+          "duration": 5000,
+          "type": "" 
+        },
+        {
+          "id": "fhh",
+          "name": "Fiddlesticks096L'HommeHarcelant ",
+          "description": "Immobilise tous les ennemis et les empêche de tirer. Augmentation de sa vitesse de 30%. Devient plus grand de 50%. Pendant 5sec",
+          "cooldown": 30000,
+          "duration": 10000,
+          "type": ""
+        }
+      ]
+    },
+    {
+      "id": "adrian",
+      "name": "Adrian",
+      "spriteKey": "adrian_full_body", 
+      "portraitKey": "adrian_portrait",
+      "bulletSpriteKey": "bullet_adrian",
+      "baseStats": {
+        "hp": 120,
+        "speed": 280,
+        "shootCooldown": 350
+      },
+      "skills": [
+        {
+          "id": "cagibi",
+          "name": "Le Cagibi",
+          "description": "Tue tous les ennemis pour se retrouver face à un seul qui a 10% de vie et x50% en cadence de tir et one shot. Si utilisé contre Nico, tous les ennemis sauf nico meurent + x70% en cadence de tir pendant 5sec ",
+          "cooldown": 20000, 
+          "duration": 5000,
+          "type": "" 
+        },
+        {
+          "id": "malveillance",
+          "name": "Malveillance",
+          "description": "Inflige des dégâts sur la durée à tous les ennemis de la map pendant 10sec.",
+          "cooldown": 30000,
+          "duration": 10000,
+          "type": ""
+        }
       ]
     }
   ],
@@ -59,35 +108,28 @@
         "speed": 80,
         "patrolDistance": 200
       },
-      "phases": [          
+      "attacks": [ 
         {
-          "hpThreshold": 1,
-          "attacks": [
-            {
-              "id": "pause_cafe_spray",
-              "name": "Pause Café (Rafale)",
-              "type": "projectile_spray",
-              "cooldown": 3000,
-              "projectileSpriteKey": "coffee_cup",
-              "projectileSpeed": 250,
-              "projectileCount": 5,
-              "spreadAngle": 60,
-              "damage": 10
-            },
-            {
-              "id": "cafe_slam",
-              "name": "Giga Tasse de Café",
-              "type": "special_projectile_large",
-              "cooldown": 10000,
-              "projectileSpriteKey": "giga_coffee_cup",
-              "projectileSpeed": 150,
-              "damage": 30,
-              "effect": "area_slow"
-            }
-          ]
+          "id": "pause_cafe_spray",
+          "name": "Pause Café (Rafale)",
+          "type": "projectile_spray",
+          "cooldown": 3500, 
+          "projectileSpriteKey": "coffee_cup",
+          "projectileSpeed": 250,
+          "projectileCount": 5,
+          "spreadAngle": 60,
+          "damage": 10
+        },
+        {
+          "id": "cafe_slam",
+          "name": "Giga Tasse de Café",
+          "type": "special_projectile_large",
+          "cooldown": 8000,
+          "projectileSpriteKey": "giga_coffee_cup",
+          "projectileSpeed": 150,
+          "damage": 30
         }
-      ],
-      "passive": null 
+      ] 
     }
   ],
   "worlds": [

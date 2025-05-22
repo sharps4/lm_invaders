@@ -14,7 +14,7 @@ export default class CharacterSelectScene extends Phaser.Scene {
         this.skillTexts = [];
 
         this.largeSpriteX = 0;
-        this.largeSpriteY = 0; 
+        this.largeSpriteY = 0;
         this.textBlockStartX = 0;
         this.textBlockStartY = 0;
     }
@@ -37,20 +37,18 @@ export default class CharacterSelectScene extends Phaser.Scene {
         let redPlatform = this.add.graphics();
         redPlatform.fillStyle(0xCC0000, 0.7);
         const platformHeight = 100;
-        const platformY = 150; 
+        const platformY = 150;
         redPlatform.fillRect(0, platformY - platformHeight / 2, this.cameras.main.width, platformHeight);
 
         this.spotlight = this.add.graphics();
 
         this.largeSpriteX = this.cameras.main.width * 0.28;
 
-        const topUIBoundary = platformY + platformHeight / 2 + 50; 
+        const topUIBoundary = platformY + platformHeight / 2 + 70;
         const bottomUIBoundary = this.cameras.main.height - 150; 
         const availableHeightForSpriteAndText = bottomUIBoundary - topUIBoundary;
         
-        this.largeSpriteY = topUIBoundary + availableHeightForSpriteAndText * 0.8; 
-                                                                                
-
+        this.largeSpriteY = (topUIBoundary + availableHeightForSpriteAndText * 0.85) - 90; 
 
         this.displayTopRowPortraits(platformY);
         this.updateCharacterDisplay();
@@ -96,7 +94,7 @@ export default class CharacterSelectScene extends Phaser.Scene {
             const y = platformY;
             let portraitSprite = this.add.sprite(x, y, character.portraitKey)
                 .setOrigin(0.5, 0.5)
-                .setDisplaySize(64, 64); 
+                .setDisplaySize(64, 64);
             this.topRowPortraits.push(portraitSprite);
         });
     }
@@ -126,19 +124,18 @@ export default class CharacterSelectScene extends Phaser.Scene {
 
         this.largeFullBodySprite = this.add.sprite(
             this.largeSpriteX,
-            this.largeSpriteY,
+            this.largeSpriteY, 
             character.spriteKey
         )
-        .setOrigin(0.5, 1) 
-        .setScale(5);     
+        .setOrigin(0.5, 1)
+        .setScale(5);
 
-        this.textBlockStartY = (this.largeFullBodySprite.y - this.largeFullBodySprite.displayHeight) + 10; 
-        
+        this.textBlockStartY = (this.largeFullBodySprite.y - this.largeFullBodySprite.displayHeight) + 10;
+
         const minTextBlockY = 150 + 100/2 + 30; 
         this.textBlockStartY = Math.max(minTextBlockY, this.textBlockStartY);
 
-
-        this.textBlockStartX = this.largeSpriteX + (this.largeFullBodySprite.displayWidth / 2) + 40; 
+        this.textBlockStartX = this.largeSpriteX + (this.largeFullBodySprite.displayWidth / 2) + 40;
 
         this.characterNameText = this.add.text(
             this.textBlockStartX,
@@ -147,7 +144,7 @@ export default class CharacterSelectScene extends Phaser.Scene {
             { font: '36px PixelFont', fill: '#FF6347', align: 'left' }
         ).setOrigin(0, 0);
 
-        let currentY = this.textBlockStartY + this.characterNameText.height + 15; 
+        let currentY = this.textBlockStartY + this.characterNameText.height + 15;
 
         if (character.description) {
             this.characterDescriptionText = this.add.text(
@@ -156,7 +153,7 @@ export default class CharacterSelectScene extends Phaser.Scene {
                 character.description,
                 { font: '20px PixelFont', fill: '#FFFFFF', align: 'left', wordWrap: { width: this.cameras.main.width - this.textBlockStartX - 50 } }
             ).setOrigin(0, 0);
-            currentY += this.characterDescriptionText.height + 20; 
+            currentY += this.characterDescriptionText.height + 20;
         } else {
             currentY += 20;
         }
@@ -166,23 +163,12 @@ export default class CharacterSelectScene extends Phaser.Scene {
             currentY += 25;
 
             character.skills.forEach((skill) => {
-                const skillNameText = this.add.text(
-                    this.textBlockStartX,
-                    currentY,
-                    `- ${skill.name}`,
-                    { font: '18px PixelFont', fill: '#FFF0A0'}
-                ).setOrigin(0,0);
+                const skillNameText = this.add.text(this.textBlockStartX, currentY, `- ${skill.name}`, { font: '18px PixelFont', fill: '#FFF0A0'}).setOrigin(0,0);
                 this.skillTexts.push(skillNameText);
-                currentY += skillNameText.height + 3; 
-
-                const skillDescText = this.add.text(
-                    this.textBlockStartX + 20,
-                    currentY,
-                    skill.description,
-                    { font: '16px PixelFont', fill: '#B0B0B0', wordWrap: { width: this.cameras.main.width - (this.textBlockStartX + 20) - 50 }, lineSpacing: 2 } 
-                ).setOrigin(0,0);
+                currentY += skillNameText.height + 3;
+                const skillDescText = this.add.text(this.textBlockStartX + 20, currentY, skill.description, { font: '16px PixelFont', fill: '#B0B0B0', wordWrap: { width: this.cameras.main.width - (this.textBlockStartX + 20) - 50 }, lineSpacing: 2 }).setOrigin(0,0);
                 this.skillTexts.push(skillDescText);
-                currentY += skillDescText.height + 10; 
+                currentY += skillDescText.height + 10;
             });
         }
     }
