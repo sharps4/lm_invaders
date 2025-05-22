@@ -5,14 +5,14 @@ export default class Boss extends Phaser.Physics.Arcade.Sprite {
         super(scene, x, y, bossData.spriteKey || 'boss_clementine');
         this.scene = scene;
         this.bossData = bossData;
-        this.projectileGroup = projectileGroup; 
+        this.projectileGroup = projectileGroup;
 
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
         this.body.setAllowGravity(false);
         this.setCollideWorldBounds(true);
-        this.setImmovable(true); 
+        this.setImmovable(true);
 
         this.currentHp = bossData.hp || 500;
         this.maxHp = bossData.hp || 500;
@@ -21,28 +21,31 @@ export default class Boss extends Phaser.Physics.Arcade.Sprite {
         this.setActive(true);
         this.setVisible(true);
 
-        this.activeAttacks = []; 
+        this.activeAttacks = [];
+        this.playerTarget = this.scene.player;
 
-        this.playerTarget = this.scene.player; 
+        this.actionDecisionCooldown = Phaser.Math.Between(1500, 3000);
+        this.nextActionDecisionTime = 0;
 
-        this.movementData = bossData.movement; 
-        this.movementSpeed = this.movementData?.speed || 80;
-        this.patrolDirection = 1;
-        this.patrolOriginX = x;
-        this.nextMoveTime = 0; 
+        this.movementData = bossData.movement;
+        this.baseMovementSpeed = this.movementData?.baseSpeed || 60; 
+        this.minYBoss = 50;
+        const approxSpriteHeight = 64; 
+        this.maxYBoss = scene.cameras.main.height / 2 - (this.height || approxSpriteHeight) / 2 - 20;
 
-        this.setupMovement();
+        this.isBursting = false;
+        this.burstEndTime = 0;
+        this.lastBurstTime = 0;
+
+        this.nextPatrolMoveTime = 0; 
+        this.currentPatrolTarget = new Phaser.Math.Vector2(this.x, this.y); 
+        this.patrolDirectionX = (Math.random() < 0.5 ? 1 : -1); 
 
         if (bossData.attacks && Array.isArray(bossData.attacks)) {
-            this.activeAttacks = bossData.attacks.map(attack => ({
-                ...attack,
-                lastUsedTime: 0 
-            }));
+            this.activeAttacks = bossData.attacks.map(attack => ({ ...attack, lastUsedTime: 0 }));
         } else {
-            this.activeAttacks = [];
-            console.warn(`Boss ${this.bossData.name} n'a pas d'attaques définies dans gameData.json!`);
+            console.warn(`Boss ${this.bossData.name} n'a pas d'attaques définies.`);
         }
-        console.log(`${this.bossData.name} active attacks:`, this.activeAttacks);
 
         if (this.projectileGroup && this.playerTarget) {
             if (!this.scene.physics.world.colliders.getActive().find(c => c.object1 === this.projectileGroup && c.object2 === this.playerTarget)) {
@@ -52,95 +55,200 @@ export default class Boss extends Phaser.Physics.Arcade.Sprite {
         console.log(`Boss ${this.bossData.name} initialisé. HP: ${this.currentHp}.`);
     }
 
-    setupMovement() {
-        this.patrolOriginX = this.x; 
-        this.nextMoveTime = 0; 
-        this.setVelocity(0,0); 
-
-        if (!this.movementData) return;
-
-        switch (this.movementData.type) {
-            case 'patrol_horizontal':
-                this.setVelocityX(this.movementSpeed * this.patrolDirection);
-                break;
-            
-            case 'random_burst':
-            case 'random_burst_aggressive':
-                
-                break;
-        }
-    }
-
     update(time, delta) {
         if (!this.active) return;
 
-        this.updateMovement(time);
-        this.tryToUseSkills(time);
+        if (this.displayHeight > 0 && this.maxYBoss < this.minYBoss + this.displayHeight) { 
+             this.maxYBoss = this.scene.cameras.main.height / 2 - this.displayHeight / 2 - 20;
+        }
+
+        this.updateMovement(time, delta);
+
+        if (time > this.nextActionDecisionTime) {
+            this.decideAndUseSkill(time);
+            this.nextActionDecisionTime = time + this.actionDecisionCooldown;
+            this.actionDecisionCooldown = Phaser.Math.Between(1500, 4000);
+        }
     }
 
-    updateMovement(time) {
+    updateMovement(time, delta) {
         if (!this.movementData || !this.active) {
-            this.setVelocity(0,0); 
+            this.setVelocity(0, 0);
             return;
         }
 
-        switch (this.movementData.type) {
-            case 'patrol_horizontal':
-                const patrolDist = this.movementData.patrolDistance || 200;
-                if (this.patrolDirection === 1 && this.x >= this.patrolOriginX + patrolDist / 2) {
-                    this.patrolDirection = -1;
-                    this.setVelocityX(this.movementSpeed * this.patrolDirection);
-                } else if (this.patrolDirection === -1 && this.x <= this.patrolOriginX - patrolDist / 2) {
-                    this.patrolDirection = 1;
-                    this.setVelocityX(this.movementSpeed * this.patrolDirection);
-                }
-                 
-                if ((this.x < this.width / 2 && this.body.velocity.x < 0) || (this.x > this.scene.cameras.main.width - this.width / 2 && this.body.velocity.x > 0)) {
-                    this.patrolDirection *= -1;
-                    this.setVelocityX(this.movementSpeed * this.patrolDirection);
-                }
-                break;
+        if (this.isBursting) {
+            if (time > this.burstEndTime) {
+                this.isBursting = false;
+                this.setVelocity(0, 0);
+                this.nextPatrolMoveTime = time; 
+            }
+            this.constrainToMovementArea();
+            return;
+        }
 
-            case 'random_burst':
-            case 'random_burst_aggressive':
-                if (time > this.nextMoveTime) {
-                    if (this.body.velocity.x !== 0 || this.body.velocity.y !== 0) { 
-                        this.setVelocity(0, 0);
-                        this.nextMoveTime = time + (this.movementData.pauseDuration || 1000);
-                    } else { 
-                        const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
-                        let speed = this.movementSpeed;
-                        if(this.movementData.type === 'random_burst_aggressive' && this.playerTarget){
-                            
-                            const angleToPlayer = Phaser.Math.Angle.Between(this.x, this.y, this.playerTarget.x, this.playerTarget.y);
-                            
-                            const finalAngle = Phaser.Math.Angle.RotateTo(angle, angleToPlayer, Phaser.Math.DegToRad(45)); 
-                            this.scene.physics.velocityFromRotation(finalAngle, speed, this.body.velocity);
-                        } else {
-                            this.scene.physics.velocityFromRotation(angle, speed, this.body.velocity);
-                        }
-                        this.nextMoveTime = time + (this.movementData.burstDuration || 500);
+        const burstConfig = this.movementData.burst;
+        if (burstConfig && time > this.lastBurstTime + (burstConfig.cooldown || 2500)) {
+            const chanceToBurstThisFrame = (burstConfig.chancePerSecond || 0.1) * (delta / 1000);
+            if (Math.random() < chanceToBurstThisFrame) {
+                this.initiateBurst(time, burstConfig);
+                return; 
+            }
+        }
+
+        if (this.movementData.type === 'dynamic_patrol_burst' || this.movementData.type === 'patrol_horizontal') {
+            if (time > this.nextPatrolMoveTime) {
+                if (this.movementData.type === 'dynamic_patrol_burst' && this.movementData.patrolArea) {
+                    const patrolAreaWidth = this.movementData.patrolArea.width || this.scene.cameras.main.width * 0.7;
+                    const patrolAreaHeight = this.movementData.patrolArea.height || (this.maxYBoss - this.minYBoss) * 0.8;
+                    const centerX = this.scene.cameras.main.width / 2;
+                    const centerY = this.minYBoss + (this.maxYBoss - this.minYBoss) / 2;
+
+                    this.currentPatrolTarget.x = Phaser.Math.Clamp(
+                        centerX + Phaser.Math.FloatBetween(-patrolAreaWidth / 2, patrolAreaWidth / 2),
+                        this.displayWidth / 2 + 10, this.scene.cameras.main.width - this.displayWidth / 2 - 10
+                    );
+                    this.currentPatrolTarget.y = Phaser.Math.Clamp(
+                        centerY + Phaser.Math.FloatBetween(-patrolAreaHeight / 2, patrolAreaHeight / 2),
+                        this.minYBoss, this.maxYBoss
+                    );
+                } else { // Simple patrouille horizontale
+                    const patrolDistance = this.movementData.patrolDistance || 200;
+                    if ((this.patrolDirectionX === 1 && this.x >= (this.xInitial || this.x) + patrolDistance / 2) ||
+                        (this.patrolDirectionX === -1 && this.x <= (this.xInitial || this.x) - patrolDistance / 2) ||
+                        (this.x <= this.displayWidth / 2 && this.patrolDirectionX === -1) ||
+                        (this.x >= this.scene.cameras.main.width - this.displayWidth/2 && this.patrolDirectionX === 1) ) {
+                        this.patrolDirectionX *= -1;
                     }
+                     this.currentPatrolTarget.x = this.x + this.patrolDirectionX * 100; 
+                     this.currentPatrolTarget.y = this.y; 
                 }
-                break;
+                this.nextPatrolMoveTime = time + Phaser.Math.Between(2000, 4000); 
+            }
+
+            this.scene.physics.moveToObject(this, this.currentPatrolTarget, this.baseMovementSpeed);
+
+            if (Phaser.Math.Distance.Between(this.x, this.y, this.currentPatrolTarget.x, this.currentPatrolTarget.y) < this.baseMovementSpeed * (delta / 1000) * 2) {
+                this.setVelocity(0, 0);
+                this.nextPatrolMoveTime = time; 
+            }
+
+        } else if (this.movementData.type === 'random_burst' || this.movementData.type === 'random_burst_aggressive') {
+            if (time > this.nextMoveTime) { 
+                 if (this.body.velocity.x === 0 && this.body.velocity.y === 0) { 
+                    this.initiateBurst(time, {
+                        speed: this.movementData.speed || this.baseMovementSpeed * 2, 
+                        durationMin: this.movementData.burstDuration || 300,
+                        durationMax: this.movementData.burstDuration || 600,
+                        targetPlayerChance: (this.movementData.type === 'random_burst_aggressive' ? 0.8 : 0.1) 
+                    });
+                    this.nextMoveTime = this.burstEndTime + (this.movementData.pauseDuration || 1000);
+                 }
+            }
+        }
+        this.constrainToMovementArea();
+    }
+
+    initiateBurst(time, burstConfig) {
+        this.isBursting = true;
+        this.lastBurstTime = time; 
+
+        let angle;
+        const burstSpeed = burstConfig.speed || 350;
+        const burstDuration = Phaser.Math.Between(burstConfig.durationMin || 200, burstConfig.durationMax || 500);
+        this.burstEndTime = time + burstDuration;
+
+        if (this.playerTarget && this.playerTarget.active && Math.random() < (burstConfig.targetPlayerChance || 0.6)) {
+            angle = Phaser.Math.Angle.Between(this.x, this.y, this.playerTarget.x, this.playerTarget.y);
+        } else {
+            angle = Phaser.Math.FloatBetween(0, Math.PI * 2); 
+        }
+
+        let endX = this.x + Math.cos(angle) * burstSpeed * (burstDuration / 1000);
+        let endY = this.y + Math.sin(angle) * burstSpeed * (burstDuration / 1000);
+
+        let adjustedAngle = angle;
+        let bounced = false;
+
+        if (endX < this.displayWidth / 2) {
+            adjustedAngle = Math.PI - angle; 
+            bounced = true;
+        } else if (endX > this.scene.cameras.main.width - this.displayWidth / 2) {
+            adjustedAngle = Math.PI - angle; 
+            bounced = true;
+        }
+
+        adjustedAngle = Phaser.Math.Angle.Wrap(adjustedAngle);
+
+        endY = this.y + Math.sin(adjustedAngle) * burstSpeed * (burstDuration / 1000); 
+        if (endY < this.minYBoss) {
+            adjustedAngle = -adjustedAngle; 
+            bounced = true;
+        } else if (endY > this.maxYBoss) {
+            adjustedAngle = -adjustedAngle; 
+            bounced = true;
+        }
+        adjustedAngle = Phaser.Math.Angle.Wrap(adjustedAngle);
+
+
+        console.log(`Boss initiates burst. Original Angle: ${Phaser.Math.RadToDeg(angle).toFixed(0)}, Adjusted Angle: ${Phaser.Math.RadToDeg(adjustedAngle).toFixed(0)}, Bounced: ${bounced}`);
+        this.scene.physics.velocityFromRotation(adjustedAngle, burstSpeed, this.body.velocity);
+
+        this.scene.time.delayedCall(burstDuration, () => {
+            if (this.active && this.isBursting) {
+                this.setVelocity(0, 0);
+                this.isBursting = false;
+                this.nextPatrolMoveTime = this.scene.time.now;
+            }
+        }, [], this);
+    }
+    
+    constrainToMovementArea() {
+        let constrained = false;
+        if (this.x < this.displayWidth / 2) { this.x = this.displayWidth / 2; if(this.body.velocity.x < 0) this.body.velocity.x *= -0.5; constrained = true;}
+        if (this.x > this.scene.cameras.main.width - this.displayWidth / 2) { this.x = this.scene.cameras.main.width - this.displayWidth / 2; if(this.body.velocity.x > 0) this.body.velocity.x *= -0.5; constrained = true;}
+        if (this.y < this.minYBoss) { this.y = this.minYBoss; if(this.body.velocity.y < 0) this.body.velocity.y *= -0.5; constrained = true;}
+        if (this.y > this.maxYBoss) { this.y = this.maxYBoss; if(this.body.velocity.y > 0) this.body.velocity.y *= -0.5; constrained = true;}
+        
+        if (constrained && this.isBursting) {
+            this.isBursting = false; 
+            this.setVelocity(0,0);
+            this.nextPatrolMoveTime = this.scene.time.now;
         }
     }
 
-    tryToUseSkills(time) {
+    decideAndUseSkill(time) {
         if (!this.active || !this.activeAttacks || this.activeAttacks.length === 0) {
-            console.log("Boss not active or no attacks defined, skipping skills.");
             return;
         }
-        console.log(`Boss trying to use skills at time: ${time}`);
+        const readySkills = this.activeAttacks.filter(attack => time > attack.lastUsedTime + attack.cooldown);
 
-        this.activeAttacks.forEach(attack => {
-            console.log(`Checking attack: ${attack.id}, LastUsed: ${attack.lastUsedTime}, Cooldown: ${attack.cooldown}, Ready in: ${ (attack.lastUsedTime + attack.cooldown) - time }`);
-            if (time > attack.lastUsedTime + attack.cooldown) {
-                console.log(`Attempting to perform skill: ${attack.id}`);
-                this.performSkill(attack, time);
-                attack.lastUsedTime = time;
+        if (readySkills.length === 0) {
+            return;
+        }
+        let totalWeight = readySkills.reduce((sum, skill) => sum + (skill.weight || 1), 0); 
+        let randomPick = Math.random() * totalWeight;
+        let skillToUse = null;
+
+        for (let skill of readySkills) {
+            randomPick -= (skill.weight || 1);
+            if (randomPick <= 0) {
+                skillToUse = skill;
+                break;
             }
-        });
+        }
+        if (!skillToUse && readySkills.length > 0) {
+             skillToUse = readySkills[Phaser.Math.Between(0, readySkills.length - 1)]; 
+        }
+        if (skillToUse) {
+            console.log(`Boss decided to use skill (weighted): ${skillToUse.id}`);
+            this.performSkill(skillToUse, time);
+
+            const originalSkill = this.activeAttacks.find(s => s.id === skillToUse.id);
+            if (originalSkill) {
+                originalSkill.lastUsedTime = time;
+            }
+        }
     }
 
     performSkill(attackData, time) {
@@ -226,9 +334,7 @@ export default class Boss extends Phaser.Physics.Arcade.Sprite {
     projectileHitPlayer(obj1, obj2) { 
         let actualPlayer;
         let actualProjectile;
-
-        
-        
+   
         if (obj1 instanceof Player) { 
             actualPlayer = obj1;
             actualProjectile = obj2;
@@ -236,10 +342,7 @@ export default class Boss extends Phaser.Physics.Arcade.Sprite {
             actualPlayer = obj2;
             actualProjectile = obj1;
         } else {
-            
-            
             console.error("Collision error: Neither object is an instance of Player!", obj1, obj2);
-            
             
             return; 
         }
@@ -256,8 +359,7 @@ export default class Boss extends Phaser.Physics.Arcade.Sprite {
         
         actualPlayer.takeDamage(actualProjectile.damage || 5); 
 
-        actualProjectile.setActive(false).setVisible(false);
-        
+        actualProjectile.setActive(false).setVisible(false); 
     }
 
     takeHit(damage) {

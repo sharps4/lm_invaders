@@ -94,6 +94,36 @@
           "type": ""
         }
       ]
+    },
+    {
+      "id": "clement",
+      "name": "Clément",
+      "spriteKey": "clement_full_body", 
+      "portraitKey": "clement_portrait",
+      "bulletSpriteKey": "bullet_clement",
+      "baseStats": {
+        "hp": 120,
+        "speed": 280,
+        "shootCooldown": 350
+      },
+      "skills": [
+        {
+          "id": "cagibi",
+          "name": "Le Cagibi",
+          "description": "Tue tous les ennemis pour se retrouver face à un seul qui a 10% de vie et x50% en cadence de tir et one shot. Si utilisé contre Nico, tous les ennemis sauf nico meurent + x70% en cadence de tir pendant 5sec ",
+          "cooldown": 20000, 
+          "duration": 5000,
+          "type": "" 
+        },
+        {
+          "id": "malveillance",
+          "name": "Malveillance",
+          "description": "Inflige des dégâts sur la durée à tous les ennemis de la map pendant 10sec.",
+          "cooldown": 30000,
+          "duration": 10000,
+          "type": ""
+        }
+      ]
     }
   ],
   "bosses": [
@@ -102,11 +132,22 @@
       "name": "Clémentine",
       "spriteKey": "boss_clementine",
       "hp": 500,
-      "scoreValue": 1000, 
-      "movement": {        
-        "type": "patrol_horizontal",  
-        "speed": 80,
-        "patrolDistance": 200
+      "scoreValue": 1000,   
+      "movement": {
+        "type": "dynamic_patrol_burst", 
+        "baseSpeed": 60,              
+        "patrolArea": {              
+          "width": 400,
+          "height": 150
+        },
+        "burst": {
+          "chancePerSecond": 0.15,    
+          "speed": 350,
+          "durationMin": 200,       
+          "durationMax": 500,       
+          "cooldown": 2500,         
+          "targetPlayerChance": 0.6 
+        }
       },
       "attacks": [ 
         {
@@ -118,7 +159,8 @@
           "projectileSpeed": 250,
           "projectileCount": 5,
           "spreadAngle": 60,
-          "damage": 10
+          "damage": 10,
+          "weight": 3
         },
         {
           "id": "cafe_slam",
@@ -127,7 +169,8 @@
           "cooldown": 8000,
           "projectileSpriteKey": "giga_coffee_cup",
           "projectileSpeed": 150,
-          "damage": 30
+          "damage": 30,
+          "weight": 1
         }
       ] 
     }
