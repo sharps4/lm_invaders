@@ -38,6 +38,8 @@ export default class PreloaderScene extends Phaser.Scene {
         this.load.json('gameData', 'assets/data/gameData.json');
 
         this.load.image('leo_portrait', 'assets/images/leo_portrait.png');
+        this.load.image('thomas_portrait', 'assets/images/thomas_portrait.png');
+        this.load.image('adrian_portrait', 'assets/images/adrian_portrait.png');
         // this.load.image('leo_full_body', 'assets/images/leo_full_body.png');
 
         // this.createPlaceholderTexture('player_leo', 32, 32, '#00FF00');
@@ -45,6 +47,9 @@ export default class PreloaderScene extends Phaser.Scene {
         this.createPlaceholderTexture('enemy_cliche1', 32, 32, '#FF0000');
         this.createPlaceholderTexture('boss_clementine', 64, 64, '#FF00FF'); 
         this.createPlaceholderTexture('coffee_cup', 12, 12, '#A0522D');  
+
+        this.createPlaceholderTexture('skill_icon_gif_calin', 32, 32, '#FF69B4'); 
+        this.createPlaceholderTexture('skill_icon_analyse', 32, 32, '#00BFFF');
 
 
         this.createPlaceholderTexture('player', 32, 32, '#00FFFF'); 

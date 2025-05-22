@@ -28,6 +28,10 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.damageReductionFactor = 0; 
 
         scene.add.existing(this); 
+
+        if (this.scene.updatePlayerHealthBar) { 
+            this.scene.updatePlayerHealthBar();
+        }
     }
 
     update(cursors, shootKey, skillKeys, time) { 
@@ -65,6 +69,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
     activateSkill(skill, time) {
         console.log(`Activation de la compétence: ${skill.name}`);
+        this.scene.cameras.main.flash(50, 255, 255, 0);
         skill.lastUsedTime = time;
         skill.isActive = true;
         skill.activationTime = time; 
@@ -117,6 +122,10 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.scene.time.delayedCall(100, () => {
             this.setAlpha(1);
         });
+
+        if (this.scene.updatePlayerHealthBar) {
+            this.scene.updatePlayerHealthBar();
+        }
 
         if (this.currentHp <= 0) {
             this.die();

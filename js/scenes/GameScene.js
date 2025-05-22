@@ -19,7 +19,8 @@ export default class GameScene extends Phaser.Scene {
         this.score = 0;
         this.scoreText = null;
         this.waveText = null;
-        this.skillTexts = [];
+        // this.skillTexts = [];
+        this.skillUIElements = [];
         this.gameData = null;
 
         this.currentWorldData = null;
@@ -32,6 +33,14 @@ export default class GameScene extends Phaser.Scene {
         this.enemiesKilledInWave = 0;
 
         this.bossSpawned = false; 
+
+        this.playerHealthBarBg = null;      
+        this.playerHealthBar = null;       
+        this.playerHealthText = null;
+
+        this.bossHealthBarBg = null;
+        this.bossHealthBar = null;
+        this.bossNameText = null;
     }
 
     init(data) {
@@ -76,6 +85,8 @@ export default class GameScene extends Phaser.Scene {
             });
         }
 
+        this.createPlayerHealthBar();
+
         this.bullets = this.physics.add.group({ classType: Bullet, maxSize: 30, runChildUpdate: true });
         this.enemies = this.physics.add.group({ classType: Enemy, runChildUpdate: true });
         this.enemyBullets = this.physics.add.group({ defaultKey: 'bullet', maxSize: 50, runChildUpdate: true }); 
@@ -87,7 +98,8 @@ export default class GameScene extends Phaser.Scene {
 
         this.scoreText = this.add.text(16, 16, 'SCORE: 0', { font: '24px PixelFont', fill: '#fff' });
         this.waveText = this.add.text(this.cameras.main.width - 16, 16, `VAGUE: -`, { font: '24px PixelFont', fill: '#fff' }).setOrigin(1, 0);
-        this.createSkillUI();
+        // this.createSkillUI();
+        this.createModernSkillUI();
 
         this.currentWaveIndex = -1;
         this.boss = null;
@@ -266,7 +278,10 @@ export default class GameScene extends Phaser.Scene {
     spawnBoss(bossIdToSpawn) {
         if (this.bossSpawned && this.boss && this.boss.active) return;
 
+        this.bossSpawned = true;
+
         const bossData = this.gameData.bosses.find(b => b.id === bossIdToSpawn);
+        this.createBossHealthBar(bossData); 
         if (bossData) {
             console.log(`SPAWNING BOSS ${bossData.name}`);
             this.enemies.clear(true, true);
@@ -321,8 +336,10 @@ export default class GameScene extends Phaser.Scene {
         if (!bossInstance.active || !bullet.active) return;
         bullet.setActive(false).setVisible(false);
         const hitSuccess = bossInstance.takeHit(this.player.currentBulletDamage);
+        this.updateBossHealthBar();
 
         if (hitSuccess && !bossInstance.active) { 
+            this.updateBossHealthBar();
             this.score += bossInstance.scoreValue || 1000;
             this.scoreText.setText('SCORE: ' + this.score);
             this.boss = null; 
@@ -357,56 +374,173 @@ export default class GameScene extends Phaser.Scene {
         }
     }
 
-    createSkillUI() {
-        this.skillTexts = [];
-        if (this.playerData && this.playerData.skills) {
-            this.playerData.skills.forEach((skill, index) => {
-                let keyDisplayName = `SKILL ${index + 1}`;
-                const phaserKeyObject = this.skillKeys[index];
-                if (phaserKeyObject && typeof phaserKeyObject.key === 'string' && phaserKeyObject.key.length > 0) {
-                    keyDisplayName = phaserKeyObject.key.toUpperCase();
-                    if (keyDisplayName === " ") keyDisplayName = "SPACE";
-                } else if (phaserKeyObject && phaserKeyObject.keyCode) {
-                    const keyMap = { 32: 'SPACE', 65: 'A', 69: 'E', 81: 'Q', 87: 'W', 90: 'Z' };
-                    if (keyMap[phaserKeyObject.keyCode]) keyDisplayName = keyMap[phaserKeyObject.keyCode];
-                }
-                let yPos = 50 + index * 30;
-                this.skillTexts[index] = this.add.text(16, yPos, `${keyDisplayName}: ${skill.name} (Prêt)`,
-                    { font: '18px PixelFont', fill: '#fff' }
-                );
-            });
-        }
+    createModernSkillUI() {
+        this.skillUIElements = [];
+        if (!this.playerData || !this.playerData.skills) return;
+
+        const skillIconSize = 40; 
+        const spacing = 10;
+        const startX = 20 + 200 + 20;
+        const yPos = this.cameras.main.height - 45; 
+
+        this.playerData.skills.forEach((skillData, index) => {
+            const skillX = startX + index * (skillIconSize + spacing);
+
+            const icon = this.add.sprite(skillX, yPos, skillData.iconKey || 'bullet') 
+                .setOrigin(0, 0.5) 
+                .setDisplaySize(skillIconSize, skillIconSize)
+                .setScrollFactor(0);
+
+            const cooldownGraphics = this.add.graphics({ x: skillX, y: yPos - skillIconSize / 2}); 
+            cooldownGraphics.setScrollFactor(0);
+
+            let keyDisplayName = `SKILL ${index + 1}`;
+            const phaserKeyObject = this.skillKeys[index];
+            if (phaserKeyObject && typeof phaserKeyObject.key === 'string' && phaserKeyObject.key.length > 0) {
+                keyDisplayName = phaserKeyObject.key.toUpperCase();
+                if (keyDisplayName === " ") keyDisplayName = "SPACE";
+            }
+            const keyText = this.add.text(skillX + skillIconSize / 2, yPos + skillIconSize / 2 + 5, keyDisplayName, {
+                font: '12px PixelFont', fill: '#000', backgroundColor: '#fff', padding: {x:2, y:0}
+            }).setOrigin(0.5, 0).setScrollFactor(0);
+
+
+            this.skillUIElements[index] = {
+                icon: icon,
+                cooldownGraphics: cooldownGraphics,
+                keyText: keyText,
+                skillData: skillData 
+            };
+        });
     }
 
-    updateSkillUI(time) {
-        if (this.player && this.player.skills && this.skillTexts.length > 0) {
-            this.player.skills.forEach((skillState, index) => {
-                if (this.skillTexts[index] && this.skillKeys[index]) {
-                    let keyDisplayName = `SKILL ${index + 1}`;
-                    const phaserKeyObject = this.skillKeys[index];
-                     if (phaserKeyObject && typeof phaserKeyObject.key === 'string' && phaserKeyObject.key.length > 0) {
-                        keyDisplayName = phaserKeyObject.key.toUpperCase();
-                        if (keyDisplayName === " ") keyDisplayName = "SPACE";
-                    } else if (phaserKeyObject && phaserKeyObject.keyCode) {
-                        const keyMap = { 32: 'SPACE', 65: 'A', 69: 'E', 81: 'Q', 87: 'W', 90: 'Z' };
-                        if (keyMap[phaserKeyObject.keyCode]) keyDisplayName = keyMap[phaserKeyObject.keyCode];
-                    }
-                    let statusText = "";
-                    if (skillState.isActive) {
-                        const remainingDuration = Math.max(0, ( (skillState.activationTime + skillState.duration) - time ) / 1000).toFixed(1);
-                        statusText = `Actif: ${remainingDuration}s`;
-                        this.skillTexts[index].setFill('#0f0');
-                    } else if (time < skillState.lastUsedTime + skillState.cooldown) {
-                        const remainingCooldown = Math.max(0, ( (skillState.lastUsedTime + skillState.cooldown) - time ) / 1000).toFixed(1);
-                        statusText = `CD: ${remainingCooldown}s`;
-                        this.skillTexts[index].setFill('#f00');
-                    } else {
-                        statusText = "Prêt";
-                        this.skillTexts[index].setFill('#fff');
-                    }
-                    this.skillTexts[index].setText(`${keyDisplayName}: ${skillState.name} (${statusText})`);
-                }
-            });
+    updateSkillUI(time) { 
+        if (!this.player || !this.player.skills || this.skillUIElements.length === 0) return;
+
+        this.player.skills.forEach((skillState, index) => { 
+            const uiElement = this.skillUIElements[index];
+            if (!uiElement) return;
+
+            uiElement.cooldownGraphics.clear();
+
+            if (skillState.isActive) {
+                uiElement.icon.setTint(0x00ff00); 
+                const remainingDuration = Math.max(0, ((skillState.activationTime + skillState.duration) - time));
+                const durationProgress = remainingDuration / skillState.duration;
+                
+                uiElement.cooldownGraphics.fillStyle(0x00aa00, 0.7); 
+                uiElement.cooldownGraphics.fillRect(0, uiElement.icon.displayHeight * (1 - durationProgress) , uiElement.icon.displayWidth, uiElement.icon.displayHeight * durationProgress);
+
+            } else if (time < skillState.lastUsedTime + skillState.cooldown) {
+                uiElement.icon.setTint(0x555555); 
+                const timePassed = time - skillState.lastUsedTime;
+                const cooldownProgress = timePassed / skillState.cooldown;
+
+                uiElement.cooldownGraphics.fillStyle(0xffffff, 0.4); 
+                uiElement.cooldownGraphics.fillRect(0, uiElement.icon.displayHeight * (1 - cooldownProgress) , uiElement.icon.displayWidth, uiElement.icon.displayHeight * cooldownProgress);
+
+            } else {
+                uiElement.icon.clearTint(); 
+            }
+        });
+    }
+
+    createPlayerHealthBar() {
+        const barWidth = 200;
+        const barHeight = 20;
+        const x = 20; 
+        const y = this.cameras.main.height - 40; 
+
+        this.playerHealthBarBg = this.add.graphics();
+        this.playerHealthBarBg.fillStyle(0x555555, 0.8); 
+        this.playerHealthBarBg.fillRect(x, y, barWidth, barHeight);
+        this.playerHealthBarBg.setScrollFactor(0); 
+
+        this.playerHealthBar = this.add.graphics();
+        this.playerHealthBar.setScrollFactor(0);
+        this.updatePlayerHealthBar(); 
+
+        this.playerHealthText = this.add.text(x + barWidth / 2, y + barHeight / 2, '', {
+            font: '14px PixelFont', fill: '#fff'
+        }).setOrigin(0.5).setScrollFactor(0);
+        this.updatePlayerHealthBar(); 
+    }
+
+    createBossHealthBar(bossData) {
+        if (this.bossHealthBarBg) this.bossHealthBarBg.destroy();
+        if (this.bossHealthBar) this.bossHealthBar.destroy();
+        if (this.bossNameText) this.bossNameText.destroy();
+
+        const barWidth = this.cameras.main.width * 0.6; 
+        const barHeight = 25;
+        const x = this.cameras.main.width / 2 - barWidth / 2; 
+        const y = 30;
+
+        this.bossHealthBarBg = this.add.graphics();
+        this.bossHealthBarBg.fillStyle(0x330033, 0.8); 
+        this.bossHealthBarBg.fillRect(x, y, barWidth, barHeight);
+        this.bossHealthBarBg.setScrollFactor(0);
+
+        this.bossHealthBar = this.add.graphics();
+        this.bossHealthBar.setScrollFactor(0);
+
+        this.bossNameText = this.add.text(x + barWidth / 2, y - 15, bossData.name.toUpperCase(), {
+            font: '18px PixelFont', fill: '#fff'
+        }).setOrigin(0.5).setScrollFactor(0);
+
+        this.updateBossHealthBar(); 
+    }
+
+    updateBossHealthBar() {
+        if (!this.boss || !this.boss.active || !this.bossHealthBar || !this.bossHealthBarBg) {
+            if (this.bossHealthBarBg) this.bossHealthBarBg.setVisible(false);
+            if (this.bossHealthBar) this.bossHealthBar.setVisible(false);
+            if (this.bossNameText) this.bossNameText.setVisible(false);
+            return;
+        }
+        
+        this.bossHealthBarBg.setVisible(true);
+        this.bossHealthBar.setVisible(true);
+        this.bossNameText.setVisible(true);
+
+
+        const barWidth = this.cameras.main.width * 0.6;
+        const barHeight = 25;
+        const x = this.cameras.main.width / 2 - barWidth / 2;
+        const y = 30;
+
+        this.bossHealthBar.clear();
+        const healthPercentage = this.boss.currentHp / this.boss.maxHp;
+        const currentBarWidth = barWidth * healthPercentage;
+
+        this.bossHealthBar.fillStyle(0xff00ff, 1); 
+        this.bossHealthBar.fillRect(x, y, currentBarWidth, barHeight);
+    }
+
+
+    updatePlayerHealthBar() {
+        if (!this.player || !this.playerHealthBar || !this.playerHealthBarBg) return;
+
+        const barWidth = 200; 
+        const barHeight = 20;
+        const x = 20;
+        const y = this.cameras.main.height - 40;
+
+        this.playerHealthBar.clear();
+        const healthPercentage = this.player.currentHp / this.player.maxHp;
+        const currentBarWidth = barWidth * healthPercentage;
+
+        if (healthPercentage > 0.6) {
+            this.playerHealthBar.fillStyle(0x00ff00, 1); 
+        } else if (healthPercentage > 0.3) {
+            this.playerHealthBar.fillStyle(0xffff00, 1); 
+        } else {
+            this.playerHealthBar.fillStyle(0xff0000, 1); 
+        }
+        this.playerHealthBar.fillRect(x, y, currentBarWidth, barHeight);
+
+        if (this.playerHealthText) {
+            this.playerHealthText.setText(`${Math.max(0, Math.ceil(this.player.currentHp))} / ${this.player.maxHp}`);
         }
     }
 }
