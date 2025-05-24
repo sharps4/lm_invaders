@@ -80,6 +80,7 @@
       "spriteKey": "adrian_full_body", 
       "portraitKey": "adrian_portrait",
       "bulletSpriteKey": "bullet_adrian",
+      "description": "Le sang des hommes de l'Est coule dans ses veines, à ne déranger sous aucun prétexte sous peine de finir dans le cagibi. Son élection en tant que délégué a permis de réinventer la roue, mais attention à ce qu'il ne vous jette pas un sort en langue roumaine. Votre seule chance de le mettre K.O. est de lui faire boire de l'alcool ou de le mettre dans un avion.",
       "baseStats": {
         "hp": 120,
         "speed": 280,
@@ -91,9 +92,8 @@
           "name": "Le Cagibi",
           "iconKey": "skill_icon_cagibi",
           "description": "Tue tous les ennemis sauf un (10% PV, cadence x1.5 mais OS). Face à Nico : Nico survit, cadence x1.7 pendant 5s.",
-          "cooldown": 45000, "type": "complex_aoe_effect_target_buff",
+          "cooldown": 45000, "type": "complex_aoe_target_buff_debuff",
           "effect": {
-            "targetHpPercent": 0.10,
             "targetFireRateMultiplier": 1.5,
             "playerFireRateBuffVsNico": 1.7,
             "playerBuffDurationVsNico": 5000

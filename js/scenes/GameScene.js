@@ -97,7 +97,7 @@ export default class GameScene extends Phaser.Scene {
 
         this.createPlayerHealthBar();
 
-        this.bullets = this.physics.add.group({ classType: Bullet, maxSize: 30, runChildUpdate: true });
+        this.bullets = this.physics.add.group({ classType: Bullet, maxSize: 30, runChildUpdate: true, });
         this.enemies = this.physics.add.group({ classType: Enemy, runChildUpdate: true });
         this.enemyBullets = this.physics.add.group({ defaultKey: 'bullet', maxSize: 50, runChildUpdate: true }); 
         this.bossProjectiles = this.physics.add.group({ defaultKey: 'coffee_cup', maxSize: 50, runChildUpdate: true }); 
@@ -105,6 +105,7 @@ export default class GameScene extends Phaser.Scene {
         this.physics.add.overlap(this.bullets, this.enemies, this.bulletHitEnemy, null, this);
         this.physics.add.overlap(this.player, this.enemyBullets, this.playerHitByEnemyBullet, null, this);
         this.physics.add.overlap(this.player, this.enemies, this.playerCollideWithEnemy, null, this);
+
 
         this.scoreText = this.add.text(16, 16, 'SCORE: 0', { font: '24px Arial', fill: '#fff' });
         this.waveText = this.add.text(this.cameras.main.width - 16, 16, `VAGUE: -`, { font: '24px Arial', fill: '#fff' }).setOrigin(1, 0);
@@ -334,36 +335,30 @@ export default class GameScene extends Phaser.Scene {
         }
     }
 
-    bulletHitEnemy(bullet, enemy) {
-        if (this.gameEnded) return;
-        if (!bullet.active || !enemy.active) return;
-        let damageToDeal = this.player.currentBulletDamage;
+        bulletHitEnemy(bullet, enemy) {
+            if (this.gameEnded) return;
+            if (!bullet.active || !enemy.active) return;
+            bullet.setActive(false).setVisible(false);
 
-        if (bullet.isSpecialProjectile && bullet.texture.key === 'sandwich_projectile' && bullet.skillEffect) {
-            damageToDeal = bullet.skillEffect.baseDamage * bullet.skillEffect.impactDamageBonus;
-            console.log("Sandwich hit! Damage:", damageToDeal);
-            if (typeof enemy.applyDoT === 'function') {
-                enemy.applyDoT({
-                    damage: bullet.skillEffect.dotDamage,
-                    duration: bullet.skillEffect.dotDuration,
-                    ticks: bullet.skillEffect.dotTicks,
-                    startTime: this.time.now 
-                });
+            const pointsEarned = enemy.takeHit(this.player.currentBulletDamage, false);
+
+            if (pointsEarned > 0) { 
+                this.checkWaveCompletion(true, pointsEarned); 
             }
         }
 
-        bullet.setActive(false).setVisible(false);
-        const points = enemy.takeHit(damageToDeal);
+        checkWaveCompletion(addScoreFromKill = true, pointsForKill = 0) {
+            if (addScoreFromKill && pointsForKill > 0) {
+                this.score += pointsForKill;
+                this.scoreText.setText('SCORE: ' + this.score);
+            }
 
-        if (points > 0) {
-            this.score += points;
-            this.scoreText.setText('SCORE: ' + this.score);
+            if (this.gameEnded) return; 
 
-            if (this.currentWaveData && !(this.boss && this.boss.active) && !this.bossSpawned ) { 
+            if (this.currentWaveData && !(this.boss && this.boss.active) && !this.bossSpawned ) {
                 if (this.currentWaveData.type === 'kill_count') {
-                    this.enemiesKilledInWave++;
-                    if (this.enemiesKilledInWave >= this.enemiesToKillInWave && this.enemies.countActive(true) === 0) {
-                        console.log(`Vague "kill_count" ${this.currentWaveIndex + 1} terminée.`);
+                    if (this.enemies.countActive(true) === 0) {
+                        console.log(`Vague "kill_count" ${this.currentWaveIndex + 1} terminée (plus d'ennemis actifs).`);
                         this.time.delayedCall(1500, this.startNextWave, [], this);
                     }
                 } else if (this.currentWaveData.type === 'timed_survival' && this.survivalWaveActive) {
@@ -375,7 +370,6 @@ export default class GameScene extends Phaser.Scene {
                 }
             }
         }
-    }
 
     bulletHitBoss(bossInstance, bullet) { 
         if (!bossInstance.active || !bullet.active) return;
@@ -408,22 +402,25 @@ export default class GameScene extends Phaser.Scene {
     }
 
     playerCollideWithEnemy(player, enemy) {
+        if (this.gameEnded) return;
         if (!player.active || !enemy.active) return;
+        let damageToPlayer = 15;
         player.takeDamage(15);
-        const enemyDiedFromCollision = enemy.takeHit(1000);         
+        const pointsEarned = enemy.takeHit(1000, false); 
 
-        if (enemyDiedFromCollision > 0 && this.currentWaveData && !(this.boss && this.boss.active) && !this.bossSpawned) {
-            if (this.currentWaveData.type === 'kill_count') {
-                this.enemiesKilledInWave++;
-                if (this.enemiesKilledInWave >= this.enemiesToKillInWave && this.enemies.countActive(true) === 0) {
-                    this.time.delayedCall(1500, this.startNextWave, [], this);
-                }
-            } else if (this.currentWaveData.type === 'timed_survival' && this.survivalWaveActive) {
-                if ((!this.waveTimer || this.waveTimer.destroyed || this.waveTimer.paused) && this.enemies.countActive(true) === 0) {
-                    this.survivalWaveActive = false;
-                    this.time.delayedCall(1500, this.startNextWave, [], this);
-                }
+        if (enemy.isCagibiEnraged) {
+            console.log("Player collided with Cagibi ENRAGED enemy! ONE SHOT!");
+            damageToPlayer = player.currentHp * 2; 
+        } else {
+            const enemyDiedFromCollision = enemy.takeHit(1000, false);
+            if (enemyDiedFromCollision > 0) {
+                this.checkWaveCompletion(true, enemyDiedFromCollision);
             }
+        }
+        player.takeDamage(damageToPlayer);
+
+        if (pointsEarned > 0) { 
+             this.checkWaveCompletion(true, pointsEarned);
         }
     }
 
@@ -447,16 +444,41 @@ export default class GameScene extends Phaser.Scene {
             const cooldownGraphics = this.add.graphics({ x: skillX, y: yPos - skillIconSize / 2}); 
             cooldownGraphics.setScrollFactor(0);
 
-            let keyDisplayName = `SKILL ${index + 1}`;
+            let keyDisplayName = `?`;
             const phaserKeyObject = this.skillKeys[index];
-            if (phaserKeyObject && typeof phaserKeyObject.key === 'string' && phaserKeyObject.key.length > 0) {
-                keyDisplayName = phaserKeyObject.key.toUpperCase();
-                if (keyDisplayName === " ") keyDisplayName = "SPACE";
+            if (phaserKeyObject) {
+                if (phaserKeyObject.originalEvent && typeof phaserKeyObject.originalEvent.key === 'string') {
+                    let keyChar = phaserKeyObject.originalEvent.key;
+                    if (keyChar === " ") {
+                        keyDisplayName = "ESPACE"; 
+                    } else if (keyChar.length === 1) { 
+                        keyDisplayName = keyChar.toUpperCase();
+                    } else if (keyChar.startsWith("Arrow")) {
+                        keyDisplayName = keyChar.substring(5).toUpperCase(); 
+                    } else {
+                        keyDisplayName = `[${phaserKeyObject.keyCode}]`; 
+                    }
+                } else if (phaserKeyObject.keyCode) { 
+                    const commonKeyCodes = {
+                        65: 'A', 
+                        90: 'Z', 
+                        69: 'E', 
+                        81: 'Q', 
+                        87: 'W', 
+                    };
+                    keyDisplayName = commonKeyCodes[phaserKeyObject.keyCode] || `[${phaserKeyObject.keyCode}]`;
+                }
             }
-            const keyText = this.add.text(skillX + skillIconSize / 2, yPos + skillIconSize / 2 + 5, keyDisplayName, {
-                font: '12px Arial', fill: '#000', backgroundColor: '#fff', padding: {x:2, y:0}
+
+            const keyText = this.add.text(skillX + skillIconSize / 2, yPos + skillIconSize / 2 + 8, keyDisplayName, { 
+                font: '14px Arial', 
+                fill: '#333',      
+                backgroundColor: '#ccc', 
+                padding: { x: 5, y: 2 },
+                align: 'center'
             }).setOrigin(0.5, 0).setScrollFactor(0);
 
+            keyText.setDepth(1);
 
             this.skillUIElements[index] = {
                 icon: icon,

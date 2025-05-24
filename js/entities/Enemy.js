@@ -25,11 +25,18 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.silenceTimer = null;
 
         this.activeDoTs = [];
+
+        this.isCagibiEnraged = false; 
+        this.originalMaxHp = 20;      
+        this.originalContactDamage = 0; 
     }
 
     spawn(enemyData, player) {
+        this.originalMaxHp = enemyData.hp || 20; 
+        this.hp = this.originalMaxHp;
         this.originalShootCooldown = enemyData.shootCooldown || Phaser.Math.Between(1500, 3000);
         this.enemyData = enemyData;
+        this.isCagibiEnraged = false;
         this.setTexture(enemyData.spriteKey);
         this.hp = enemyData.hp || 20;
         this.speedY = enemyData.speedY || Phaser.Math.Between(40, 80);
@@ -53,6 +60,14 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
             this.scene.physics.add.existing(this);
         }
 
+        this.clearTint();
+
+        this.originalShootCooldown = enemyData.shootCooldown || Phaser.Math.Between(1500, 3000);
+        this.shootCooldown = this.originalShootCooldown;
+        if (this.shootTimer) {
+            this.shootTimer.delay = this.shootCooldown + Phaser.Math.Between(-500, 500);
+        }
+
         this.body.setAllowGravity(false);
         this.setCollideWorldBounds(true);
         this.body.onWorldBounds = true; 
@@ -72,15 +87,20 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (this.moveTimer) this.moveTimer.remove();
 
         if (this.playerTarget) {
-            if (this.shootTimer) this.shootTimer.remove(); 
+            if (this.shootTimer) {
+                console.log(`Enemy ${this.texture.key} removing old shootTimer`);
+                this.shootTimer.remove();
+            }
             this.shootTimer = this.scene.time.addEvent({
                 delay: this.shootCooldown + Phaser.Math.Between(-500, 500),
                 callback: this.tryToShoot,
                 callbackScope: this,
                 loop: true
             });
-            if (this.isSilenced) { 
+            console.log(`Enemy ${this.texture.key} shootTimer CREATED. Delay: ${this.shootTimer.delay}, Paused: ${this.shootTimer.paused}`);
+            if (this.isSilenced) {
                 this.shootTimer.paused = true;
+                console.log(`Enemy ${this.texture.key} shootTimer immediately paused due to isSilenced.`);
             }
         }
 
@@ -91,6 +111,26 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
             loop: true
         });
         this.changeHorizontalMovement(); 
+    }
+
+    becomeCagibiEnraged(cagibiEffect) {
+        if (!this.active) return;
+
+        console.log(`Enemy ${this.texture.key} becomes CAGIBI ENRAGED!`);
+        this.isCagibiEnraged = true;
+
+        this.hp = Math.ceil(this.originalMaxHp * 1.10);
+        console.log(`Cagibi Enraged: HP set to ${this.hp} (original max was ${this.originalMaxHp})`);
+
+        const fireRateMultiplier = cagibiEffect.targetFireRateMultiplier || 1.5;
+        this.shootCooldown = this.originalShootCooldown / fireRateMultiplier;
+        if (this.shootTimer) {
+            this.shootTimer.delay = this.shootCooldown + Phaser.Math.Between(-100, 100); 
+        }
+        console.log(`Cagibi Enraged: Fire rate increased. New shootCooldown: ${this.shootCooldown}`);
+
+        this.setTint(0xFF0000); 
+        this.setScale(1.2); 
     }
 
     changeHorizontalMovement() {
@@ -110,15 +150,26 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     tryToShoot() {
+        console.log(`Enemy ${this.texture.key} tryToShoot. Active: ${this.active}, Stunned: ${this.isStunned}, Silenced: ${this.isSilenced}, Player: ${!!this.playerTarget}, Player Active: ${this.playerTarget ? this.playerTarget.active : 'N/A'}`);
         if (!this.active || this.isStunned || this.isSilenced || !this.playerTarget || !this.playerTarget.active) {
+            console.log("Condition not met for shooting.");
+            return;
+        }
+        console.log(`Enemy ${this.texture.key} IS SHOOTING NOW.`);
+
+        if (!this.scene.enemyBullets) { 
+            console.error("ENEMY SHOOTING: this.scene.enemyBullets group is MISSING!");
             return;
         }
 
-        let bullet = this.scene.enemyBullets.get(this.x, this.y + this.height / 2, 'bullet');
+        let bullet = this.scene.enemyBullets.get(this.x, this.y + this.displayHeight / 2);
         if (bullet) {
             bullet.setActive(true);
             bullet.setVisible(true);
-            if(!bullet.body) this.scene.physics.add.existing(bullet); 
+            if (!bullet.body) {
+                console.log(`Enemy ${this.texture.key}: Bullet has no body, adding physics.`);
+                this.scene.physics.add.existing(bullet); 
+            } 
             bullet.body.setAllowGravity(false);
             bullet.body.setCircle(bullet.width/2 * 0.8); 
             bullet.damage = this.enemyData.bulletDamage || 5;
@@ -129,6 +180,10 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     silence(duration) {
+        if (!this.active || this.isCagibiEnraged) {
+            if(this.isCagibiEnraged) console.log("Cagibi Enraged enemy is immune to silence!");
+            return;
+        }
         if (!this.active) return;
         console.log(`Enemy ${this.texture.key} silenced for ${duration}ms`);
         this.isSilenced = true;
@@ -190,6 +245,18 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
             });
          }
 
+         if (isDotDamage && this.hp > 0) {
+             this.scene.tweens.add({
+                targets: this, tint: 0xff00ff, 
+                duration: 80, yoyo: true, repeat: 0,
+                onComplete: () => {
+                    if (this.active && !this.isStunned && !this.isSilenced) this.clearTint(); 
+                    else if (this.active && this.isStunned) this.setTint(0xffff00);
+                    else if (this.active && this.isSilenced) this.setTint(0xAAAAFF);
+                }
+            });
+        }
+
         if (this.hp <= 0) {
             this.setActive(false);
             this.setVisible(false);
@@ -198,33 +265,25 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
             if (this.stunTimer) this.stunTimer.remove();
             if (this.silenceTimer) this.silenceTimer.remove();
             if (this.fireRateBuffTimer) this.fireRateBuffTimer.remove();
-            this.activeDoTs = [];
+            this.activeDoTs = []; 
+            if (this.isCagibiEnraged) this.setScale(this.originalScale || 1);
 
-            return isDotDamage ? 0 : this.scoreValue;
+            return this.scoreValue;                
         } else {
-            if (!isDotDamage) { 
+            if (!isDotDamage) {
                 this.scene.tweens.add({
-                    targets: this,
-                    alpha: 0.5,
-                    duration: 50,
-                    yoyo: true,
-                    repeat: 0
+                    targets: this, alpha: 0.5, duration: 60, yoyo: true, repeat: 0
                 });
-             }
-            else { 
-                this.scene.tweens.add({
-                    targets: this,
-                    alpha: 0.5,
-                    duration: 50,
-                    yoyo: true,
-                    repeat: 0
-                });
-             }
-            return 0;
+            }
+            return 0; 
         }
     }
 
     stun(duration) {
+        if (!this.active || this.isCagibiEnraged) { 
+            if(this.isCagibiEnraged) console.log("Cagibi Enraged enemy is immune to stun!");
+            return;
+        }
         if (!this.active) return;
         this.isStunned = true;
         this.canMove = false;
@@ -294,21 +353,20 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (this.activeDoTs.length > 0) {
             for (let i = this.activeDoTs.length - 1; i >= 0; i--) {
                 const dot = this.activeDoTs[i];
-                if (time > dot.startTime + dot.duration) { 
-                    this.activeDoTs.splice(i, 1);
+                if (time > dot.startTime + dot.duration) {
+                    this.activeDoTs.splice(i, 1); 
                     continue;
                 }
-                const tickInterval = dot.duration / dot.ticks;
+
+                const tickInterval = dot.duration / Math.max(1, dot.ticks); 
                 if (time > dot.lastTickTime + tickInterval) {
-                    this.takeHit(dot.damage, true); 
+                    const diedFromDot = this.takeHit(dot.damage, true); 
                     dot.lastTickTime = time;
-                    this.scene.tweens.add({
-                        targets: this,
-                        alpha: 0.5,
-                        duration: 50,
-                        yoyo: true,
-                        repeat: 0
-                    });
+
+                    if (diedFromDot > 0 && this.scene && typeof this.scene.checkWaveCompletion === 'function') {
+                        console.log("Enemy died from DoT, checking wave completion.");
+                        this.scene.checkWaveCompletion(false);
+                    }
                 }
             }
         }

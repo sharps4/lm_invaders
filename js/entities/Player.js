@@ -52,6 +52,15 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         // console.log("Player update called. Active:", this.active); 
         if (!this.active) return;
 
+        this.skills.forEach((skill, index) => {
+            if (skillKeys[index] && skillKeys[index].isDown) {
+                console.log(`Touche pour ${skill.id} pressée. Time: ${time}, LastUsed+CD: ${skill.lastUsedTime + skill.cooldown}, isActive: ${skill.isActive}`);
+                if (time > skill.lastUsedTime + skill.cooldown && !skill.isActive) {
+                    this.activateSkill(skill, time);
+                }
+            }
+        });
+
         if (this.isDashing) {
             this.skills.forEach(skill => {
                 if (skill.isActive && skill.id === 'dash') {
@@ -117,25 +126,29 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
                     }
                 });
                 let calinEffect = this.scene.add.text(this.scene.cameras.main.width / 2, this.scene.cameras.main.height / 2, 'GIF CALIN!', { font: '60px Arial', fill: '#FF69B4', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5);
-                this.scene.time.delayedCall(1000, () => calinEffect.destroy()); 
+                this.scene.time.delayedCall(1000, () => calinEffect.destroy());
+                skill.isActive = false; 
                 break;
 
             case 'analyse':
+                skill.isActive = true;
                 this.damageReductionFactor = skill.effect.damageReduction;
                 this.setTint(0x00ff00); 
+                skill.isActive = false;
                 break;
 
             case 'tour_de_piste': 
+                skill.isActive = true;
                 this.isInvulnerable = true;
                 this.isDashing = true;
                 const angleToMouse = Phaser.Math.Angle.Between(this.x, this.y, this.scene.input.activePointer.worldX, this.scene.input.activePointer.worldY);
                 this.scene.physics.velocityFromRotation(angleToMouse, skill.effect.dashSpeed, this.body.velocity);
-                // Effet visuel pour le dash (ex: traînée, changement de sprite temporaire)
                 this.setTint(0xFFFF00);
                 this.setAlpha(0.7);
                 break;
 
             case 'le_pilote': 
+                skill.isActive = true;
                 this.shootCooldown = this.originalShootCooldown / skill.effect.fireRateMultiplier;
                 // this.setTexture('player_clement_avion'); // Si tu as un sprite d'avion
                 this.setTint(0xADD8E6); 
@@ -168,14 +181,18 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
                     }
                     this.scene.physics.velocityFromRotation(aimAngle, 400, sandwich.body.velocity);
                 }
+                skill.isActive = false;
                 break;
 
             case 'l_homme_timide': 
+                skill.isActive = true;  
                 this.isInvulnerable = true; 
                 this.setAlpha(0.2); 
+                skill.isActive = false;
                 break;
 
             case 'fiddlesticks': 
+                skill.isActive = true;
                 this.scene.enemies.getChildren().forEach(enemy => {
                     if (enemy.active) {
                         enemy.stun(skill.duration); // Stun
@@ -186,37 +203,35 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
                 this.speed = this.originalSpeed * skill.effect.speedMultiplier;
                 this.setScale(this.originalScale * skill.effect.sizeMultiplier);
                 this.setTint(0x8B0000); 
+                skill.isActive = false;
                 break;
 
-            case 'le_cagibi': 
+            case 'le_cagibi':
                 const enemiesToAffect = this.scene.enemies.getChildren().filter(e => e.active);
                 if (enemiesToAffect.length > 0) {
-                    const isBossFight = (this.scene.boss && this.scene.boss.active && this.scene.boss.bossData.id === 'nico'); 
+                    const isBossNico = (this.scene.boss && this.scene.boss.active && this.scene.boss.bossData.id === 'nico');
 
-                    if (isBossFight) {
-                        console.log("Cagibi vs Nico - Logique spéciale à implémenter complètement");
-                        this.shootCooldown = this.originalShootCooldown / skill.effect.playerFireRateBuffVsNico;
+                    if (isBossNico) {
+                        console.log("Cagibi vs Nico - Le joueur est buffé");
+                        this.originalShootCooldownTemp = this.originalShootCooldown;
+                        this.shootCooldown = this.originalShootCooldown / (skill.effect.playerFireRateBuffVsNico || 1.7); 
                     } else {
                         const keptEnemyIndex = Phaser.Math.Between(0, enemiesToAffect.length - 1);
                         const keptEnemy = enemiesToAffect[keptEnemyIndex];
 
-                        enemiesToAffect.forEach((enemy, index) => {
-                            if (index !== keptEnemyIndex) {
+                        enemiesToAffect.forEach((enemy) => {
+                            if (enemy !== keptEnemy) {
                                 enemy.takeHit(enemy.hp * 2); 
                             }
                         });
 
                         if (keptEnemy && keptEnemy.active) {
-                            keptEnemy.hp = Math.max(1, Math.floor(keptEnemy.maxHp * skill.effect.targetHpPercent)); 
-                            // keptEnemy.setFireRateMultiplier(skill.effect.targetFireRateMultiplier); // Méthode à ajouter à Enemy
-                            if (keptEnemy.shootTimer) { 
-                                keptEnemy.shootCooldown /= skill.effect.targetFireRateMultiplier;
-                                keptEnemy.shootTimer.delay = keptEnemy.shootCooldown + Phaser.Math.Between(-200,200); 
-                            }
-                            keptEnemy.setTint(0xff0000); 
+                            console.log(`Cagibi: Ennemi gardé: ${keptEnemy.texture.key}`);
+                            keptEnemy.becomeCagibiEnraged(skill.effect); 
                         }
                     }
                 }
+                skill.isActive = false;
                 break;
 
             case 'malveillance': 
@@ -230,6 +245,15 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
                         });
                     }
                 });
+                skill.isActive = false;
+                break;
+
+            default:
+                if (!skill.duration || skill.duration <= 0) { 
+                    skill.isActive = false;
+                } else {
+                    skill.isActive = true; 
+                }
                 break;
         }
     }
@@ -238,8 +262,8 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.skills.forEach(skill => {
             if (skill.isActive) {
                 if (time > skill.activationTime + skill.duration) {
-                    skill.isActive = false;
                     console.log(`Fin de la compétence: ${skill.name} (ID: ${skill.id})`);
+                    skill.isActive = false;
                     switch (skill.id) {
                         case 'analyse': 
                             this.damageReductionFactor = 0;
@@ -268,11 +292,13 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
                                 if (enemy.shootTimer) enemy.shootTimer.paused = false; 
                             });
                             break;
-                        case 'le_cagibi': 
+                        case 'le_cagibi':
                             if (this.scene.boss && this.scene.boss.active && this.scene.boss.bossData.id === 'nico') {
-                                this.shootCooldown = this.originalShootCooldown;
+                                if (skill.effect && skill.effect.playerBuffDurationVsNico === skill.duration) {
+                                    this.shootCooldown = this.originalShootCooldown;
+                                    console.log("Fin du buff de cadence de tir Cagibi vs Nico (via updateActiveSkills)");
+                                }
                             }
-                            this.scene.enemies.getChildren().forEach(enemy => enemy.clearTint()); 
                             break;
                     }
                 }
