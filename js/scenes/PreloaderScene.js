@@ -49,6 +49,15 @@ export default class PreloaderScene extends Phaser.Scene {
         this.createPlaceholderTexture('boss_clementine', 64, 64, '#FF00FF'); 
         this.createPlaceholderTexture('coffee_cup', 12, 12, '#A0522D');  
 
+        this.createPlaceholderTexture('skill_icon_cagibi', 32, 32, '#4A235A'); 
+        this.createPlaceholderTexture('skill_icon_malveillance', 32, 32, '#78281F'); 
+        this.createPlaceholderTexture('skill_icon_pilote', 32, 32, '#AED6F1'); 
+        this.createPlaceholderTexture('skill_icon_cornichon', 32, 32, '#27AE60'); 
+        this.createPlaceholderTexture('skill_icon_homme_timide', 32, 32, '#D5D8DC'); 
+        this.createPlaceholderTexture('skill_icon_fiddlesticks', 32, 32, '#E74C3C'); 
+        this.createPlaceholderTexture('sandwich_projectile', 24, 16, '#D2B48C'); 
+
+        this.createPlaceholderTexture('skill_icon_tour_de_piste', 32, 32, '#F1C40F'); 
         this.createPlaceholderTexture('skill_icon_gif_calin', 32, 32, '#FF69B4'); 
         this.createPlaceholderTexture('skill_icon_analyse', 32, 32, '#00BFFF');
 
@@ -56,6 +65,9 @@ export default class PreloaderScene extends Phaser.Scene {
         this.createPlaceholderTexture('player', 32, 32, '#00FFFF'); 
         this.createPlaceholderTexture('bullet', 8, 16, '#FFFFFF');  
         this.createPlaceholderTexture('enemy', 32, 32, '#FFA500'); 
+        this.createPlaceholderTexture('bullet_clement', 8, 16, '#AED6F1');
+        this.createPlaceholderTexture('bullet_thomas', 8, 16, '#E0E0E0');
+        this.createPlaceholderTexture('bullet_adrian', 8, 16, '#A569BD');
     }
 
     createPlaceholderTexture(key, width, height, colorHex) {

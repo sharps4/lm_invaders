@@ -31,6 +31,16 @@
           "effect": { "damageReduction": 0.3 }, 
           "type": "self_buff",
           "iconKey": "skill_icon_analyse"
+        },
+        {
+          "id": "tour_de_piste",
+          "name": "Tour de Piste",
+          "iconKey": "skill_icon_tour_de_piste", 
+          "description": "Dash rapide, invulnérable et inflige des dégâts de contact.",
+          "cooldown": 12000, 
+          "duration": 500,   
+          "type": "dash_invulnerable_damage",
+          "effect": { "dashSpeed": 800, "damageOnHit": 15 }
         }
       ]
     },
@@ -48,20 +58,19 @@
       },
       "skills": [
         {
-          "id": "homme_timide",
-          "name": "L’homme timide",
-          "description": "Devient invisible pendant 3sec",
-          "cooldown": 20000, 
-          "duration": 5000,
-          "type": "" 
+          "id": "l_homme_timide",
+          "name": "L'Homme Timide",
+          "iconKey": "skill_icon_homme_timide",
+          "description": "Devient invisible pendant 3sec.",
+          "cooldown": 20000, "duration": 3000, "type": "self_invisibility"
         },
         {
-          "id": "fhh",
-          "name": "Fiddlesticks096L'HommeHarcelant ",
-          "description": "Immobilise tous les ennemis et les empêche de tirer. Augmentation de sa vitesse de 30%. Devient plus grand de 50%. Pendant 5sec",
-          "cooldown": 30000,
-          "duration": 10000,
-          "type": ""
+          "id": "fiddlesticks",
+          "name": "Fiddlesticks096",
+          "iconKey": "skill_icon_fiddlesticks",
+          "description": "Immobilise et silence ennemis. Vitesse +30%. Taille +50%. Pendant 5sec.",
+          "cooldown": 35000, "duration": 5000, "type": "aoe_stun_silence_self_buff_speed_size",
+          "effect": { "speedMultiplier": 1.3, "sizeMultiplier": 1.5 }
         }
       ]
     },
@@ -78,20 +87,25 @@
       },
       "skills": [
         {
-          "id": "cagibi",
+          "id": "le_cagibi",
           "name": "Le Cagibi",
-          "description": "Tue tous les ennemis pour se retrouver face à un seul qui a 10% de vie et x50% en cadence de tir et one shot. Si utilisé contre Nico, tous les ennemis sauf nico meurent + x70% en cadence de tir pendant 5sec ",
-          "cooldown": 20000, 
-          "duration": 5000,
-          "type": "" 
+          "iconKey": "skill_icon_cagibi",
+          "description": "Tue tous les ennemis sauf un (10% PV, cadence x1.5 mais OS). Face à Nico : Nico survit, cadence x1.7 pendant 5s.",
+          "cooldown": 45000, "type": "complex_aoe_effect_target_buff",
+          "effect": {
+            "targetHpPercent": 0.10,
+            "targetFireRateMultiplier": 1.5,
+            "playerFireRateBuffVsNico": 1.7,
+            "playerBuffDurationVsNico": 5000
+          }
         },
         {
           "id": "malveillance",
           "name": "Malveillance",
-          "description": "Inflige des dégâts sur la durée à tous les ennemis de la map pendant 10sec.",
-          "cooldown": 30000,
-          "duration": 10000,
-          "type": ""
+          "iconKey": "skill_icon_malveillance",
+          "description": "Dégâts sur la durée à tous les ennemis (10s).",
+          "cooldown": 22000, "type": "aoe_dot",
+          "effect": { "dotDamage": 3, "dotDuration": 10000, "dotTicks": 10 }
         }
       ]
     },
@@ -108,20 +122,27 @@
       },
       "skills": [
         {
-          "id": "cagibi",
-          "name": "Le Cagibi",
-          "description": "Tue tous les ennemis pour se retrouver face à un seul qui a 10% de vie et x50% en cadence de tir et one shot. Si utilisé contre Nico, tous les ennemis sauf nico meurent + x70% en cadence de tir pendant 5sec ",
-          "cooldown": 20000, 
-          "duration": 5000,
-          "type": "" 
+          "id": "le_pilote",
+          "name": "Le Pilote",
+          "iconKey": "skill_icon_pilote",
+          "description": "Devient un avion. Cadence de tir x1.5 pendant 5sec.", 
+          "cooldown": 25000, "duration": 5000, "type": "self_buff_firerate",
+          "effect": { "fireRateMultiplier": 1.5 } 
         },
         {
-          "id": "malveillance",
-          "name": "Malveillance",
-          "description": "Inflige des dégâts sur la durée à tous les ennemis de la map pendant 10sec.",
-          "cooldown": 30000,
-          "duration": 10000,
-          "type": ""
+          "id": "cornichon_rosette",
+          "name": "Cornichon Rosette",
+          "iconKey": "skill_icon_cornichon",
+          "description": "Envoie son sandwich. +15% dégâts à l'impact + dégâts sur la durée (10s).",
+          "cooldown": 18000, "type": "projectile_special",
+          "effect": {
+            "projectileKey": "sandwich_projectile", 
+            "baseDamage": 20, 
+            "impactDamageBonus": 1.15, 
+            "dotDamage": 5,   
+            "dotDuration": 10000, 
+            "dotTicks": 5      
+          }
         }
       ]
     }
@@ -180,8 +201,12 @@
       "id": "cafeteria",
       "name": "Monde 1: Cafétéria",
       "waves": [
-        { "type": "kill_count", "enemyType": "cliche_iceberg_1", "count": 3, "spawnDelay": 800 },
-        { "type": "timed_survival", "duration": 15000, "enemyType": "cliche_iceberg_1", "spawnInterval": 2000, "enemiesPerInterval": 1 }, 
+        { "type": "kill_count", "enemyType": "cliche_iceberg_1", "count": 3, "spawnDelay": 1000 },
+        { "type": "kill_count", "enemyType": "cliche_iceberg_1", "count": 4, "spawnDelay": 800 },
+        { "type": "timed_survival", "duration": 15000, "enemyType": "cliche_iceberg_1", "spawnInterval": 2500, "enemiesPerInterval": 1 },
+        { "type": "kill_count", "enemyType": "cliche_iceberg_1", "count": 5, "spawnDelay": 700, "enemyConfig": {"hp": 25, "speedY": 60} }, 
+        { "type": "kill_count", "enemyType": "cliche_iceberg_1", "count": 3, "spawnDelay": 600, "enemyConfig": {"hp": 30, "shootCooldown": 1500} }, 
+        { "type": "timed_survival", "duration": 20000, "enemyType": "cliche_iceberg_1", "spawnInterval": 1800, "enemiesPerInterval": 2 }, 
         { "type": "boss_fight", "bossId": "clementine" }
       ],
       "bossId": "clementine" 

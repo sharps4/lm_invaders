@@ -19,9 +19,16 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         this.minYPosition = 50;
         this.maxYPosition = 350; 
+
+        this.originalShootCooldown = 2000;
+        this.isSilenced = false;
+        this.silenceTimer = null;
+
+        this.activeDoTs = [];
     }
 
     spawn(enemyData, player) {
+        this.originalShootCooldown = enemyData.shootCooldown || Phaser.Math.Between(1500, 3000);
         this.enemyData = enemyData;
         this.setTexture(enemyData.spriteKey);
         this.hp = enemyData.hp || 20;
@@ -45,6 +52,7 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (!this.body) { 
             this.scene.physics.add.existing(this);
         }
+
         this.body.setAllowGravity(false);
         this.setCollideWorldBounds(true);
         this.body.onWorldBounds = true; 
@@ -55,18 +63,25 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.setVisible(true);
         this.canMove = true;
         this.isStunned = false;
+        this.isSilenced = false;
+        if (this.silenceTimer) this.silenceTimer.remove();
+        if (this.fireRateBuffTimer) this.fireRateBuffTimer.remove(); 
 
         if (this.stunTimer) this.stunTimer.remove();
         if (this.shootTimer) this.shootTimer.remove(); 
         if (this.moveTimer) this.moveTimer.remove();
 
         if (this.playerTarget) {
+            if (this.shootTimer) this.shootTimer.remove(); 
             this.shootTimer = this.scene.time.addEvent({
-                delay: this.shootCooldown + Phaser.Math.Between(-500, 500), 
+                delay: this.shootCooldown + Phaser.Math.Between(-500, 500),
                 callback: this.tryToShoot,
                 callbackScope: this,
                 loop: true
             });
+            if (this.isSilenced) { 
+                this.shootTimer.paused = true;
+            }
         }
 
         this.moveTimer = this.scene.time.addEvent({
@@ -95,7 +110,9 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     tryToShoot() {
-        if (!this.active || this.isStunned || !this.playerTarget || !this.playerTarget.active) return;
+        if (!this.active || this.isStunned || this.isSilenced || !this.playerTarget || !this.playerTarget.active) {
+            return;
+        }
 
         let bullet = this.scene.enemyBullets.get(this.x, this.y + this.height / 2, 'bullet');
         if (bullet) {
@@ -111,18 +128,98 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    takeHit(damage = 1) {
+    silence(duration) {
+        if (!this.active) return;
+        console.log(`Enemy ${this.texture.key} silenced for ${duration}ms`);
+        this.isSilenced = true;
+        if (this.shootTimer) {
+            this.shootTimer.paused = true;
+        }
+        this.setTint(0xAAAAFF); 
+
+        if (this.silenceTimer) this.silenceTimer.remove();
+        this.silenceTimer = this.scene.time.delayedCall(duration, () => {
+            if (this.active) {
+                this.isSilenced = false;
+                if (this.shootTimer) {
+                    this.shootTimer.paused = false;
+                }
+                // if (!this.isStunned) this.clearTint(); // Ne pas effacer la teinte du stun
+                // else this.setTint(0xffff00); // Rétablir la teinte de stun
+                console.log(`Enemy ${this.texture.key} silence ended.`);
+            }
+        }, [], this);
+    }
+
+    setFireRateMultiplier(multiplier, duration) {
+        if (!this.active) return;
+        console.log(`Enemy ${this.texture.key} fire rate multiplied by ${multiplier} for ${duration}ms`);
+
+        this.shootCooldown = this.originalShootCooldown / multiplier;
+        if (this.shootTimer) {
+            this.shootTimer.delay = this.shootCooldown + Phaser.Math.Between(-200, 200); 
+        }
+        this.setTint(0xFF8888); 
+
+        if (this.fireRateBuffTimer) this.fireRateBuffTimer.remove();
+        this.fireRateBuffTimer = this.scene.time.delayedCall(duration, () => {
+            if (this.active) {
+                this.shootCooldown = this.originalShootCooldown; 
+                if (this.shootTimer) {
+                    this.shootTimer.delay = this.shootCooldown + Phaser.Math.Between(-500, 500);
+                }
+                // if (!this.isStunned && !this.isSilenced) this.clearTint();
+                // else if (this.isStunned) this.setTint(0xffff00);
+                // else if (this.isSilenced) this.setTint(0xAAAAFF);
+                console.log(`Enemy ${this.texture.key} fire rate buff ended.`);
+            }
+        }, [], this);
+    }
+
+    takeHit(damage = 1, isDotDamage = false) {
         if (!this.active) return 0;
         this.hp -= damage;
+
+        if (isDotDamage) { 
+            this.scene.tweens.add({
+                targets: this,
+                alpha: 0.5,
+                duration: 50,
+                yoyo: true,
+                repeat: 0
+            });
+         }
+
         if (this.hp <= 0) {
             this.setActive(false);
             this.setVisible(false);
             if (this.shootTimer) this.shootTimer.remove();
             if (this.moveTimer) this.moveTimer.remove();
             if (this.stunTimer) this.stunTimer.remove();
-            return this.scoreValue;
+            if (this.silenceTimer) this.silenceTimer.remove();
+            if (this.fireRateBuffTimer) this.fireRateBuffTimer.remove();
+            this.activeDoTs = [];
+
+            return isDotDamage ? 0 : this.scoreValue;
         } else {
-            this.scene.tweens.add({ targets: this, alpha: 0.5, duration: 60, yoyo: true, repeat: 0 });
+            if (!isDotDamage) { 
+                this.scene.tweens.add({
+                    targets: this,
+                    alpha: 0.5,
+                    duration: 50,
+                    yoyo: true,
+                    repeat: 0
+                });
+             }
+            else { 
+                this.scene.tweens.add({
+                    targets: this,
+                    alpha: 0.5,
+                    duration: 50,
+                    yoyo: true,
+                    repeat: 0
+                });
+             }
             return 0;
         }
     }
@@ -137,15 +234,23 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (this.shootTimer) this.shootTimer.paused = true;
         if (this.moveTimer) this.moveTimer.paused = true;
 
+        if (this.silenceTimer && this.isSilenced) this.silenceTimer.paused = true; 
+        if (this.fireRateBuffTimer) this.fireRateBuffTimer.paused = true; 
+
         if (this.stunTimer) this.stunTimer.remove();
         this.stunTimer = this.scene.time.delayedCall(duration, () => {
-            if (this.active) { 
+            if (this.active) {
                 this.isStunned = false;
                 this.canMove = true;
                 this.clearTint();
                 if(this.body) this.setVelocity(this.speedX, this.speedY);
-                if (this.shootTimer) this.shootTimer.paused = false;
+
+                if (this.shootTimer && !this.isSilenced) this.shootTimer.paused = false;
                 if (this.moveTimer) this.moveTimer.paused = false;
+                if (this.silenceTimer && this.isSilenced) this.silenceTimer.paused = false;
+                if (this.fireRateBuffTimer) this.fireRateBuffTimer.paused = false;
+
+                if (this.isSilenced) this.setTint(0xAAAAFF); 
             }
         }, [], this);
     }
@@ -165,7 +270,7 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
             if(this.moveTimer) this.moveTimer.reset({ delay: Phaser.Math.Between(300, 1000), callback: this.changeHorizontalMovement, callbackScope: this, loop: true });
 
         } else if (this.y <= this.minYPosition && this.body.velocity.y < 0) {
-            this.setVelocityY(Math.abs(this.speedY)); // Redescend
+            this.setVelocityY(Math.abs(this.speedY)); 
         }
 
         if (this.body.onWorldBounds) {
@@ -185,5 +290,31 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
             if (this.moveTimer) this.moveTimer.remove();
             if (this.stunTimer) this.stunTimer.remove();
         }
+
+        if (this.activeDoTs.length > 0) {
+            for (let i = this.activeDoTs.length - 1; i >= 0; i--) {
+                const dot = this.activeDoTs[i];
+                if (time > dot.startTime + dot.duration) { 
+                    this.activeDoTs.splice(i, 1);
+                    continue;
+                }
+                const tickInterval = dot.duration / dot.ticks;
+                if (time > dot.lastTickTime + tickInterval) {
+                    this.takeHit(dot.damage, true); 
+                    dot.lastTickTime = time;
+                    this.scene.tweens.add({
+                        targets: this,
+                        alpha: 0.5,
+                        duration: 50,
+                        yoyo: true,
+                        repeat: 0
+                    });
+                }
+            }
+        }
+    }
+
+    applyDoT(dotEffect) { 
+        this.activeDoTs.push({...dotEffect, lastTickTime: dotEffect.startTime});
     }
 }

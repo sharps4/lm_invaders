@@ -199,7 +199,11 @@ export default class GameScene extends Phaser.Scene {
                 if (enemy) {
                     let modifiedConfig = {...enemyConfig};
                     if (waveData.elite) modifiedConfig.hp = (modifiedConfig.hp || 20) * 1.5;
-                    enemy.spawn(modifiedConfig, this.player);
+                    let currentEnemyConfig = { ...this.gameData.enemies[waveData.enemyType] };
+                    if (waveData.enemyConfig) { 
+                        currentEnemyConfig = { ...currentEnemyConfig, ...waveData.enemyConfig };
+                    }
+                    enemy.spawn(currentEnemyConfig, this.player);
                 }
             }, [], this);
         }
@@ -233,7 +237,11 @@ export default class GameScene extends Phaser.Scene {
                     const x = Phaser.Math.Between(100, this.cameras.main.width - 100);
                     const y = Phaser.Math.Between(-80, -40);
                     let enemy = this.enemies.get(x, y, enemyConfig.spriteKey);
-                    if (enemy) enemy.spawn(enemyConfig, this.player);
+                    let currentEnemyConfig = { ...this.gameData.enemies[waveData.enemyType] };
+                    if (waveData.enemyConfig) { 
+                        currentEnemyConfig = { ...currentEnemyConfig, ...waveData.enemyConfig };
+                    }
+                    enemy.spawn(currentEnemyConfig, this.player);
                 }
             },
             callbackScope: this,
@@ -329,8 +337,23 @@ export default class GameScene extends Phaser.Scene {
     bulletHitEnemy(bullet, enemy) {
         if (this.gameEnded) return;
         if (!bullet.active || !enemy.active) return;
+        let damageToDeal = this.player.currentBulletDamage;
+
+        if (bullet.isSpecialProjectile && bullet.texture.key === 'sandwich_projectile' && bullet.skillEffect) {
+            damageToDeal = bullet.skillEffect.baseDamage * bullet.skillEffect.impactDamageBonus;
+            console.log("Sandwich hit! Damage:", damageToDeal);
+            if (typeof enemy.applyDoT === 'function') {
+                enemy.applyDoT({
+                    damage: bullet.skillEffect.dotDamage,
+                    duration: bullet.skillEffect.dotDuration,
+                    ticks: bullet.skillEffect.dotTicks,
+                    startTime: this.time.now 
+                });
+            }
+        }
+
         bullet.setActive(false).setVisible(false);
-        const points = enemy.takeHit(this.player.currentBulletDamage);
+        const points = enemy.takeHit(damageToDeal);
 
         if (points > 0) {
             this.score += points;
