@@ -41,6 +41,8 @@ export default class GameScene extends Phaser.Scene {
         this.bossHealthBarBg = null;
         this.bossHealthBar = null;
         this.bossNameText = null;
+
+        this.gameEnded = false;
     }
 
     init(data) {
@@ -48,6 +50,9 @@ export default class GameScene extends Phaser.Scene {
     }
 
     create() {
+        console.log("GameScene CREATE called. Attempting camera reset FIRST."); 
+        this.cameras.resetAll(); 
+        this.gameEnded = false;
         this.gameData = this.registry.get('gameData');
         this.playerData = this.gameData.characters.find(char => char.id === this.selectedCharacterId);
 
@@ -68,6 +73,11 @@ export default class GameScene extends Phaser.Scene {
         this.cameras.main.setBackgroundColor('#2c3e50');
 
         this.player = new Player(this, this.cameras.main.width / 2, this.cameras.main.height - 50, this.playerData);
+
+        if (this.player) { 
+            this.player.setActive(true); 
+            this.player.setVisible(true); 
+        }
 
         this.cursors = this.input.keyboard.createCursorKeys();
         this.shootKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
@@ -96,8 +106,8 @@ export default class GameScene extends Phaser.Scene {
         this.physics.add.overlap(this.player, this.enemyBullets, this.playerHitByEnemyBullet, null, this);
         this.physics.add.overlap(this.player, this.enemies, this.playerCollideWithEnemy, null, this);
 
-        this.scoreText = this.add.text(16, 16, 'SCORE: 0', { font: '24px PixelFont', fill: '#fff' });
-        this.waveText = this.add.text(this.cameras.main.width - 16, 16, `VAGUE: -`, { font: '24px PixelFont', fill: '#fff' }).setOrigin(1, 0);
+        this.scoreText = this.add.text(16, 16, 'SCORE: 0', { font: '24px Arial', fill: '#fff' });
+        this.waveText = this.add.text(this.cameras.main.width - 16, 16, `VAGUE: -`, { font: '24px Arial', fill: '#fff' }).setOrigin(1, 0);
         // this.createSkillUI();
         this.createModernSkillUI();
 
@@ -111,18 +121,28 @@ export default class GameScene extends Phaser.Scene {
         this.startNextWave();
     }
 
-    update(time, delta) {
-        if (this.player && this.player.active) {
-            this.player.update(this.cursors, this.shootKey, this.skillKeys, time);
+    endGameSequence(isVictory = false) {
+        if (this.gameEnded) {
+            console.log("GameScene endGameSequence: Already called, exiting.");
+            return;
         }
-        this.updateSkillUI(time);
+        this.gameEnded = true;
+        console.log("GameScene endGameSequence: Processing. Victory:", isVictory, "Final Score:", this.score);
 
-        if (this.boss && this.boss.active) {
-            this.boss.update(time, delta);
-        }
+        if (this.player && this.player.active) this.player.active = false;
+
+        this.time.delayedCall(1500, () => { 
+            console.log("GameScene: Starting ResultsScene.");
+            if (this.scene && this.scene.systems && this.scene.systems.isActive()) {
+                this.scene.start('ResultsScene', { score: this.score, victory: isVictory });
+            } else {
+                console.warn("GameScene is no longer active, cannot start ResultsScene reliably.");
+            }
+        }, [], this);
     }
 
     startNextWave() {
+        if (this.gameEnded) return;
         if (this.bossSpawned && this.boss && this.boss.active) { 
             console.log("Boss principal actif, pas de nouvelle vague normale.");
             return;
@@ -133,8 +153,9 @@ export default class GameScene extends Phaser.Scene {
         if (this.currentWaveIndex >= this.currentWorldData.waves.length) {
             console.log("Toutes les vagues du monde terminées !");
             if(this.player.active) this.player.active = false;
-            this.add.text(this.cameras.main.width / 2, this.cameras.main.height/2, "MONDE TERMINE!", {font: '48px PixelFont', fill: '#0f0'}).setOrigin(0.5);
+            this.add.text(this.cameras.main.width / 2, this.cameras.main.height/2, "MONDE TERMINE!", {font: '48px Arial', fill: '#0f0'}).setOrigin(0.5);
             this.time.delayedCall(3000, () => this.scene.start('MenuScene'));
+            this.endGameSequence(true);
             return;
         }
 
@@ -192,7 +213,7 @@ export default class GameScene extends Phaser.Scene {
         const enemiesPerInterval = waveData.enemiesPerInterval || 1;
         this.survivalWaveActive = true;
 
-        let spawnTimerDisplay = this.add.text(this.cameras.main.width / 2, 30, '', { font: '20px PixelFont', fill: '#FFD700' }).setOrigin(0.5);
+        let spawnTimerDisplay = this.add.text(this.cameras.main.width / 2, 30, '', { font: '20px Arial', fill: '#FFD700' }).setOrigin(0.5);
         let spawnUpdateTimer = null; 
 
         const spawnPhaseStartTime = this.time.now; 
@@ -306,6 +327,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     bulletHitEnemy(bullet, enemy) {
+        if (this.gameEnded) return;
         if (!bullet.active || !enemy.active) return;
         bullet.setActive(false).setVisible(false);
         const points = enemy.takeHit(this.player.currentBulletDamage);
@@ -335,7 +357,7 @@ export default class GameScene extends Phaser.Scene {
     bulletHitBoss(bossInstance, bullet) { 
         if (!bossInstance.active || !bullet.active) return;
         bullet.setActive(false).setVisible(false);
-        const hitSuccess = bossInstance.takeHit(this.player.currentBulletDamage);
+        const hitSuccess = bossInstance.takeHit(this.player.currentBulletDamage);   
         this.updateBossHealthBar();
 
         if (hitSuccess && !bossInstance.active) { 
@@ -345,6 +367,14 @@ export default class GameScene extends Phaser.Scene {
             this.boss = null; 
             console.log("Boss vaincu, passage à la vague suivante (ou fin de monde).");
             this.time.delayedCall(1000, this.startNextWave, [], this);
+
+            if (this.currentWaveIndex >= this.currentWorldData.waves.length -1) {
+                console.log("C'était le boss final du monde.");
+                 this.add.text(this.cameras.main.width / 2, this.cameras.main.height/2 + 60, "BOSS VAINCU!", {font: '40px Arial', fill: '#0f0'}).setOrigin(0.5);
+                this.endGameSequence(true); 
+            } else {
+                this.time.delayedCall(1000, this.startNextWave, [], this); 
+            }
         }
     }
 
@@ -401,7 +431,7 @@ export default class GameScene extends Phaser.Scene {
                 if (keyDisplayName === " ") keyDisplayName = "SPACE";
             }
             const keyText = this.add.text(skillX + skillIconSize / 2, yPos + skillIconSize / 2 + 5, keyDisplayName, {
-                font: '12px PixelFont', fill: '#000', backgroundColor: '#fff', padding: {x:2, y:0}
+                font: '12px Arial', fill: '#000', backgroundColor: '#fff', padding: {x:2, y:0}
             }).setOrigin(0.5, 0).setScrollFactor(0);
 
 
@@ -446,25 +476,41 @@ export default class GameScene extends Phaser.Scene {
     }
 
     createPlayerHealthBar() {
-        const barWidth = 200;
-        const barHeight = 20;
-        const x = 20; 
-        const y = this.cameras.main.height - 40; 
+    const barWidth = 200;
+    const barHeight = 20;
+    const x = 20;
+    const y = this.cameras.main.height - 40;
+    const initialHpText = (this.player) ? `${Math.max(0, Math.ceil(this.player.currentHp))} / ${this.player.maxHp}` : 'HP: --/--';
 
-        this.playerHealthBarBg = this.add.graphics();
-        this.playerHealthBarBg.fillStyle(0x555555, 0.8); 
-        this.playerHealthBarBg.fillRect(x, y, barWidth, barHeight);
-        this.playerHealthBarBg.setScrollFactor(0); 
+    if (this.playerHealthBarBg && this.playerHealthBarBg.scene) this.playerHealthBarBg.destroy();
+    if (this.playerHealthBar && this.playerHealthBar.scene) this.playerHealthBar.destroy();
+    if (this.playerHealthText && this.playerHealthText.scene) this.playerHealthText.destroy();
+    this.playerHealthBarBg = null;
+    this.playerHealthBar = null;
+    this.playerHealthText = null;
 
-        this.playerHealthBar = this.add.graphics();
-        this.playerHealthBar.setScrollFactor(0);
-        this.updatePlayerHealthBar(); 
+    this.playerHealthBarBg = this.add.graphics(); 
+    this.playerHealthBarBg.fillStyle(0x555555, 0.8);
+    this.playerHealthBarBg.fillRect(x, y, barWidth, barHeight);
+    this.playerHealthBarBg.setScrollFactor(0);
 
-        this.playerHealthText = this.add.text(x + barWidth / 2, y + barHeight / 2, '', {
-            font: '14px PixelFont', fill: '#fff'
-        }).setOrigin(0.5).setScrollFactor(0);
-        this.updatePlayerHealthBar(); 
+    this.playerHealthBar = this.add.graphics();
+    this.playerHealthBar.setScrollFactor(0);
+
+    try {
+        console.log("GameScene createPlayerHealthBar: Attempting to create playerHealthText with content:", initialHpText);
+        this.playerHealthText = this.add.text(
+            x + barWidth / 2, y + barHeight / 2,
+            initialHpText,
+            { font: '14px Arial', fill: '#fff' }
+        ).setOrigin(0.5).setScrollFactor(0);
+        console.log("GameScene createPlayerHealthBar: playerHealthText CREATED.");
+    } catch (e) {
+        console.error("ERROR creating playerHealthText in createPlayerHealthBar:", e);
     }
+
+    this.updatePlayerHealthBar();
+}
 
     createBossHealthBar(bossData) {
         if (this.bossHealthBarBg) this.bossHealthBarBg.destroy();
@@ -485,10 +531,28 @@ export default class GameScene extends Phaser.Scene {
         this.bossHealthBar.setScrollFactor(0);
 
         this.bossNameText = this.add.text(x + barWidth / 2, y - 15, bossData.name.toUpperCase(), {
-            font: '18px PixelFont', fill: '#fff'
+            font: '18px Arial', fill: '#fff'
         }).setOrigin(0.5).setScrollFactor(0);
 
         this.updateBossHealthBar(); 
+    }
+
+    update(time, delta) {
+        if (this.gameEnded) { 
+            return;
+        }
+
+        if (this.player && this.player.active) {
+            this.player.update(this.cursors, this.shootKey, this.skillKeys, time);
+        } else if (this.player && !this.player.active && !this.gameEnded) {
+            console.log("Player not active during game update");
+        }
+
+        if (this.boss && this.boss.active) {
+            this.boss.update(time, delta);
+        }
+
+        this.updateSkillUI(time); 
     }
 
     updateBossHealthBar() {
@@ -519,15 +583,23 @@ export default class GameScene extends Phaser.Scene {
 
 
     updatePlayerHealthBar() {
-        if (!this.player || !this.playerHealthBar || !this.playerHealthBarBg) return;
+        if (!this.player || !this.playerHealthBarBg || !this.playerHealthBar) {
+            console.warn("updatePlayerHealthBar: Player or health bar elements missing."); // Décommente pour déboguer si besoin
+            return;
+        }
 
-        const barWidth = 200; 
+        this.playerHealthBarBg.setVisible(this.player.active); 
+        this.playerHealthBar.setVisible(this.player.active);
+        if (this.playerHealthText) this.playerHealthText.setVisible(this.player.active);
+
+
+        const barWidth = 200;
         const barHeight = 20;
         const x = 20;
         const y = this.cameras.main.height - 40;
 
-        this.playerHealthBar.clear();
-        const healthPercentage = this.player.currentHp / this.player.maxHp;
+        this.playerHealthBar.clear(); 
+        const healthPercentage = Math.max(0, this.player.currentHp) / this.player.maxHp; 
         const currentBarWidth = barWidth * healthPercentage;
 
         if (healthPercentage > 0.6) {
@@ -539,8 +611,33 @@ export default class GameScene extends Phaser.Scene {
         }
         this.playerHealthBar.fillRect(x, y, currentBarWidth, barHeight);
 
-        if (this.playerHealthText) {
-            this.playerHealthText.setText(`${Math.max(0, Math.ceil(this.player.currentHp))} / ${this.player.maxHp}`);
+        if (this.playerHealthText && this.playerHealthText.active) {
+            const hpText = (this.player) ? `${Math.max(0, Math.ceil(this.player.currentHp))} / ${this.player.maxHp}` : 'HP: --/--';
+            if (this.playerHealthText.text !== hpText) {
+            this.playerHealthText.setText(hpText);
+            }
+        } else if (this.playerHealthText && !this.playerHealthText.active) {
+            console.warn("updatePlayerHealthBar: playerHealthText exists but is not active.");
         }
+    }
+
+    shutdown() {
+        console.log("CharacterSelectScene shutdown() EXECUTED.");
+        if (this.largeFullBodySprite && this.largeFullBodySprite.active) this.largeFullBodySprite.destroy();
+        if (this.characterNameText && this.characterNameText.active) this.characterNameText.destroy();
+        if (this.characterDescriptionText && this.characterDescriptionText.active) this.characterDescriptionText.destroy();
+        if (this.skillTitleText && this.skillTitleText.active) this.skillTitleText.destroy();
+        this.skillTexts.forEach(text => { if (text && text.active) text.destroy(); });
+        this.skillTexts = [];
+        this.topRowPortraits.forEach(p => { if (p && p.active) p.destroy(); });
+        this.topRowPortraits = [];
+        if (this.spotlight) this.spotlight.destroy(); 
+
+        this.tweens.killAll(); 
+
+        console.log("CharacterSelectScene: Resetting cameras.");
+        this.cameras.resetAll();
+
+        console.log("CharacterSelectScene shutdown completed.");
     }
 }

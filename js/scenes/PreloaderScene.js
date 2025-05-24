@@ -14,13 +14,13 @@ export default class PreloaderScene extends Phaser.Scene {
             x: width / 2,
             y: height / 2 - 50,
             text: 'CHARGEMENT...',
-            style: { font: '20px PixelFont', fill: '#ffffff' }
+            style: { font: '20px Arial', fill: '#ffffff' }
         }).setOrigin(0.5, 0.5);
         let percentText = this.make.text({
             x: width / 2,
             y: height / 2,
             text: '0%',
-            style: { font: '18px PixelFont', fill: '#ffffff' }
+            style: { font: '18px Arial', fill: '#ffffff' }
         }).setOrigin(0.5, 0.5);
         this.load.on('progress', function (value) {
             percentText.setText(parseInt(value * 100) + '%');

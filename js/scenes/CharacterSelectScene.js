@@ -31,14 +31,14 @@ export default class CharacterSelectScene extends Phaser.Scene {
         }
 
         this.add.text(this.cameras.main.width / 2, 50, 'CHOISIS TON PERSONNAGE', {
-            font: '32px PixelFont', fill: '#FFFFFF'
+            font: '32px Arial', fill: '#FFFFFF'
         }).setOrigin(0.5);
 
-        let redPlatform = this.add.graphics();
-        redPlatform.fillStyle(0xCC0000, 0.7);
+        let bluePlatform = this.add.graphics();
+        bluePlatform.fillStyle(0x0A0E2F, 0.7);
         const platformHeight = 100;
         const platformY = 150;
-        redPlatform.fillRect(0, platformY - platformHeight / 2, this.cameras.main.width, platformHeight);
+        bluePlatform.fillRect(0, platformY - platformHeight / 2, this.cameras.main.width, platformHeight);
 
         this.spotlight = this.add.graphics();
 
@@ -55,18 +55,18 @@ export default class CharacterSelectScene extends Phaser.Scene {
 
         if (this.charactersData.length > 1) {
             const arrowY = platformY;
-            let prevButton = this.add.text(80, arrowY, '<', { font: '60px PixelFont', fill: '#fff', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setInteractive();
+            let prevButton = this.add.text(80, arrowY, '<', { font: '60px Arial', fill: '#fff', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setInteractive();
             prevButton.on('pointerdown', () => this.changeCharacterSelection(-1));
             prevButton.on('pointerover', () => prevButton.setStyle({ fill: '#FFD700' }));
             prevButton.on('pointerout', () => prevButton.setStyle({ fill: '#FFF' }));
 
-            let nextButton = this.add.text(this.cameras.main.width - 80, arrowY, '>', { font: '60px PixelFont', fill: '#fff', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setInteractive();
+            let nextButton = this.add.text(this.cameras.main.width - 80, arrowY, '>', { font: '60px Arial', fill: '#fff', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setInteractive();
             nextButton.on('pointerdown', () => this.changeCharacterSelection(1));
             nextButton.on('pointerover', () => nextButton.setStyle({ fill: '#FFD700' }));
             nextButton.on('pointerout', () => nextButton.setStyle({ fill: '#FFF' }));
         }
 
-        let selectButton = this.add.text(this.cameras.main.width / 2, this.cameras.main.height - 70, 'CHOISIR', { font: '32px PixelFont', fill: '#00FF00', backgroundColor: '#111', padding: { x: 25, y: 12 } }).setOrigin(0.5).setInteractive();
+        let selectButton = this.add.text(this.cameras.main.width / 2, this.cameras.main.height - 70, 'CHOISIR', { font: '32px Arial', fill: '#00FF00', backgroundColor: '#111', padding: { x: 25, y: 12 } }).setOrigin(0.5).setInteractive();
         selectButton.on('pointerdown', () => {
             const selectedChar = this.charactersData[this.selectedCharacterIndex];
             this.scene.start('GameScene', { characterId: selectedChar.id });
@@ -74,7 +74,7 @@ export default class CharacterSelectScene extends Phaser.Scene {
         selectButton.on('pointerover', () => selectButton.setStyle({ fill: '#FFF' }));
         selectButton.on('pointerout', () => selectButton.setStyle({ fill: '#00FF00' }));
 
-        let backButton = this.add.text(80, this.cameras.main.height - 50, '< RETOUR', { font: '24px PixelFont', fill: '#ccc' }).setOrigin(0, 1).setInteractive();
+        let backButton = this.add.text(80, this.cameras.main.height - 50, '< RETOUR', { font: '24px Arial', fill: '#ccc' }).setOrigin(0, 1).setInteractive();
         backButton.on('pointerdown', () => this.scene.start('MenuScene'));
         backButton.on('pointerover', () => backButton.setStyle({ fill: '#fff' }));
         backButton.on('pointerout', () => backButton.setStyle({ fill: '#ccc' }));
@@ -141,7 +141,7 @@ export default class CharacterSelectScene extends Phaser.Scene {
             this.textBlockStartX,
             this.textBlockStartY,
             character.name.toUpperCase(),
-            { font: '36px PixelFont', fill: '#FF6347', align: 'left' }
+            { font: '36px Arial', fill: '#FF6347', align: 'left' }
         ).setOrigin(0, 0);
 
         let currentY = this.textBlockStartY + this.characterNameText.height + 15;
@@ -151,7 +151,7 @@ export default class CharacterSelectScene extends Phaser.Scene {
                 this.textBlockStartX,
                 currentY,
                 character.description,
-                { font: '20px PixelFont', fill: '#FFFFFF', align: 'left', wordWrap: { width: this.cameras.main.width - this.textBlockStartX - 50 } }
+                { font: '20px Arial', fill: '#FFFFFF', align: 'left', wordWrap: { width: this.cameras.main.width - this.textBlockStartX - 50 } }
             ).setOrigin(0, 0);
             currentY += this.characterDescriptionText.height + 20;
         } else {
@@ -159,14 +159,14 @@ export default class CharacterSelectScene extends Phaser.Scene {
         }
 
         if (character.skills && character.skills.length > 0) {
-            this.skillTitleText = this.add.text(this.textBlockStartX, currentY, "Compétences:", {font: '22px PixelFont', fill: '#FFD700'}).setOrigin(0,0);
+            this.skillTitleText = this.add.text(this.textBlockStartX, currentY, "Compétences:", {font: '22px Arial', fill: '#FFD700'}).setOrigin(0,0);
             currentY += 25;
 
             character.skills.forEach((skill) => {
-                const skillNameText = this.add.text(this.textBlockStartX, currentY, `- ${skill.name}`, { font: '18px PixelFont', fill: '#FFF0A0'}).setOrigin(0,0);
+                const skillNameText = this.add.text(this.textBlockStartX, currentY, `- ${skill.name}`, { font: '18px Arial', fill: '#FFF0A0'}).setOrigin(0,0);
                 this.skillTexts.push(skillNameText);
                 currentY += skillNameText.height + 3;
-                const skillDescText = this.add.text(this.textBlockStartX + 20, currentY, skill.description, { font: '16px PixelFont', fill: '#B0B0B0', wordWrap: { width: this.cameras.main.width - (this.textBlockStartX + 20) - 50 }, lineSpacing: 2 }).setOrigin(0,0);
+                const skillDescText = this.add.text(this.textBlockStartX + 20, currentY, skill.description, { font: '16px Arial', fill: '#B0B0B0', wordWrap: { width: this.cameras.main.width - (this.textBlockStartX + 20) - 50 }, lineSpacing: 2 }).setOrigin(0,0);
                 this.skillTexts.push(skillDescText);
                 currentY += skillDescText.height + 10;
             });
@@ -178,5 +178,22 @@ export default class CharacterSelectScene extends Phaser.Scene {
         if (this.selectedCharacterIndex < 0) this.selectedCharacterIndex = this.charactersData.length - 1;
         else if (this.selectedCharacterIndex >= this.charactersData.length) this.selectedCharacterIndex = 0;
         this.updateCharacterDisplay();
+    }
+
+    shutdown() {
+        console.log("CharacterSelectScene shutdown called");
+        if (this.largeFullBodySprite) this.largeFullBodySprite.destroy();
+        if (this.characterNameText) this.characterNameText.destroy();
+        if (this.characterDescriptionText) this.characterDescriptionText.destroy();
+        if (this.skillTitleText) this.skillTitleText.destroy();
+        this.skillTexts.forEach(text => text.destroy());
+        this.topRowPortraits.forEach(p => p.destroy());
+        if (this.spotlight) this.spotlight.destroy(); 
+
+        console.log("CharacterSelectScene: Resetting cameras.");
+        this.cameras.resetAll(); 
+
+        this.tweens.killAll(); 
+        super.shutdown();
     }
 }

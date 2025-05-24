@@ -6,7 +6,7 @@
       "spriteKey": "leo_full_body", 
       "portraitKey": "leo_portrait",
       "bulletSpriteKey": "bullet_leo",
-      "description": "L'homme aux mille mensonges, de la nièce à Poutine jusqu'au contrat Porsche, on ne sait plus où donner de la tête. L'homme aux mille paradoxes, il est capable de baiser toutes les femmes de la Terre mais n'arrive pas à passer son permis boîte auto du premier coup. Il peut gérer une équipe E-SPORT mais n'arrive pas à faire son rôle de délégué. ",
+      "description": "L'homme aux mille mensonges, de la nièce à Poutine jusqu'au contrat Porsche, on ne sait plus où donner de la tête. L'homme aux mille paradoxes, il est capable de forniquer toutes les femmes de la Terre mais n'arrive pas à passer son permis boîte auto du premier coup. Il peut gérer une équipe E-SPORT mais n'arrive malheuresement pas à faire son rôle de délégué.",
       "baseStats": {
         "hp": 100,
         "speed": 300,
@@ -40,7 +40,7 @@
       "spriteKey": "thomas_full_body", 
       "portraitKey": "thomas_portrait",
       "bulletSpriteKey": "bullet_thomas",
-      "description": "Le robot humanoïde originel, sa droiture n'a d'égal que l'Enderman. Capable des pires vices pour défendre sa bien-aimée Julie Verdier Fiot, plus connue sous le nom de Jujufinote. Il s'arme de VSCode pour annihiler ses ennemis. Sa kryptonite, c'est le casino et les coups dans les côtes. Restez sur vos gardes : quand vous voyez ce visage, fuyez... ou mourez dans d'atroces souffrances.",
+      "description": "Le robot humanoïde originel, sa droiture n'a d'égal que l'Enderman. Capable des pires vices pour défendre sa bien-aimée Julie Verdier Fiot, plus connue sous le nom de Jujufinote. Il s'arme de VSCode pour annihiler ses ennemis. Sa kryptonite : le casino et les coups dans les côtes. Restez sur vos gardes : quand vous voyez son visage, fuyez... ou mourez dans d'atroces souffrances.",
       "baseStats": {
         "hp": 120,
         "speed": 280,
