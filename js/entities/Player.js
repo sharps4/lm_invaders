@@ -103,7 +103,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
                         enemy.stun(skill.duration);
                     }
                 });
-                let calinEffect = this.scene.add.text(this.scene.cameras.main.width / 2, this.scene.cameras.main.height / 2, 'GIF CALIN!', { font: '60px PixelFont', fill: '#FF69B4', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5);
+                let calinEffect = this.scene.add.text(this.scene.cameras.main.width / 2, this.scene.cameras.main.height / 2, 'GIF CALIN!', { font: '60px Arial', fill: '#FF69B4', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5);
                 this.scene.time.delayedCall(1000, () => calinEffect.destroy()); 
                 break;
 
@@ -158,9 +158,19 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         console.log("Player died!");
         this.setActive(false);
         this.setVisible(false);
-        this.scene.add.text(this.scene.cameras.main.width / 2, this.scene.cameras.main.height / 2, 'GAME OVER', { font: '64px PixelFont', fill: '#ff0000' }).setOrigin(0.5);
-        this.scene.time.delayedCall(3000, () => {
-            this.scene.scene.start('MenuScene');
-        });
+        this.scene.add.text(
+            this.scene.cameras.main.width / 2,
+            this.scene.cameras.main.height / 2,
+            'GAME OVER',
+            { font: '64px Arial', fill: '#ff0000', stroke: '#000', strokeThickness: 4 }
+        ).setOrigin(0.5).setScrollFactor(0);
+
+        if (this.scene.endGameSequence) {
+            this.scene.endGameSequence(false);
+        } else { 
+            this.scene.time.delayedCall(3000, () => {
+                this.scene.scene.start('MenuScene');
+            });
+        }
     }
 }

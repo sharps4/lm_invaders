@@ -19,4 +19,4 @@ const config = {
     scene: [PreloaderScene, MenuScene, CharacterSelectScene, GameScene] 
 };
 
-const game = new Phaser.Game(config);
+const game = new Phaser.Game(config); 

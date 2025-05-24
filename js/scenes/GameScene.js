@@ -41,6 +41,8 @@ export default class GameScene extends Phaser.Scene {
         this.bossHealthBarBg = null;
         this.bossHealthBar = null;
         this.bossNameText = null;
+
+        this.gameEnded = false;
     }
 
     init(data) {
@@ -48,6 +50,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     create() {
+        this.gameEnded = false;
         this.gameData = this.registry.get('gameData');
         this.playerData = this.gameData.characters.find(char => char.id === this.selectedCharacterId);
 
@@ -96,8 +99,8 @@ export default class GameScene extends Phaser.Scene {
         this.physics.add.overlap(this.player, this.enemyBullets, this.playerHitByEnemyBullet, null, this);
         this.physics.add.overlap(this.player, this.enemies, this.playerCollideWithEnemy, null, this);
 
-        this.scoreText = this.add.text(16, 16, 'SCORE: 0', { font: '24px PixelFont', fill: '#fff' });
-        this.waveText = this.add.text(this.cameras.main.width - 16, 16, `VAGUE: -`, { font: '24px PixelFont', fill: '#fff' }).setOrigin(1, 0);
+        this.scoreText = this.add.text(16, 16, 'SCORE: 0', { font: '24px Arial', fill: '#fff' });
+        this.waveText = this.add.text(this.cameras.main.width - 16, 16, `VAGUE: -`, { font: '24px Arial', fill: '#fff' }).setOrigin(1, 0);
         // this.createSkillUI();
         this.createModernSkillUI();
 
@@ -109,6 +112,35 @@ export default class GameScene extends Phaser.Scene {
 
 
         this.startNextWave();
+    }
+
+    endGameSequence(isVictory = false) {
+        if (this.gameEnded) { 
+            console.log("endGameSequence: Already called, exiting.");
+            return;
+        }
+        this.gameEnded = true; 
+        console.log("endGameSequence: Called. Victory:", isVictory);
+
+
+        if (this.player && this.player.active) this.player.active = false;
+
+        const coinsEarned = Math.floor(this.score * 0.1);
+        if (coinsEarned > 0) {
+            this.addManuCoins(coinsEarned); 
+            let coinsText = this.add.text( /* ... */ ).setScrollFactor(0);
+            this.time.delayedCall(2500, () => { if (coinsText && coinsText.active) coinsText.destroy(); });
+        }
+
+        this.time.delayedCall(3000, () => {
+            console.log("GameScene: Delayed call to start MenuScene is executing.");
+            if (this.scene.systems.isActive()) { 
+                console.log("GameScene is still active, starting MenuScene.");
+                this.scene.start('MenuScene');
+            } else {
+                console.warn("GameScene is no longer active, MenuScene transition likely already handled or scene was shut down.");
+            }
+        }, [], this); 
     }
 
     update(time, delta) {
@@ -123,6 +155,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     startNextWave() {
+        if (this.gameEnded) return;
         if (this.bossSpawned && this.boss && this.boss.active) { 
             console.log("Boss principal actif, pas de nouvelle vague normale.");
             return;
@@ -133,8 +166,9 @@ export default class GameScene extends Phaser.Scene {
         if (this.currentWaveIndex >= this.currentWorldData.waves.length) {
             console.log("Toutes les vagues du monde terminées !");
             if(this.player.active) this.player.active = false;
-            this.add.text(this.cameras.main.width / 2, this.cameras.main.height/2, "MONDE TERMINE!", {font: '48px PixelFont', fill: '#0f0'}).setOrigin(0.5);
+            this.add.text(this.cameras.main.width / 2, this.cameras.main.height/2, "MONDE TERMINE!", {font: '48px Arial', fill: '#0f0'}).setOrigin(0.5);
             this.time.delayedCall(3000, () => this.scene.start('MenuScene'));
+            this.endGameSequence(true);
             return;
         }
 
@@ -192,7 +226,7 @@ export default class GameScene extends Phaser.Scene {
         const enemiesPerInterval = waveData.enemiesPerInterval || 1;
         this.survivalWaveActive = true;
 
-        let spawnTimerDisplay = this.add.text(this.cameras.main.width / 2, 30, '', { font: '20px PixelFont', fill: '#FFD700' }).setOrigin(0.5);
+        let spawnTimerDisplay = this.add.text(this.cameras.main.width / 2, 30, '', { font: '20px Arial', fill: '#FFD700' }).setOrigin(0.5);
         let spawnUpdateTimer = null; 
 
         const spawnPhaseStartTime = this.time.now; 
@@ -306,6 +340,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     bulletHitEnemy(bullet, enemy) {
+        if (this.gameEnded) return;
         if (!bullet.active || !enemy.active) return;
         bullet.setActive(false).setVisible(false);
         const points = enemy.takeHit(this.player.currentBulletDamage);
@@ -335,7 +370,7 @@ export default class GameScene extends Phaser.Scene {
     bulletHitBoss(bossInstance, bullet) { 
         if (!bossInstance.active || !bullet.active) return;
         bullet.setActive(false).setVisible(false);
-        const hitSuccess = bossInstance.takeHit(this.player.currentBulletDamage);
+        const hitSuccess = bossInstance.takeHit(this.player.currentBulletDamage);   
         this.updateBossHealthBar();
 
         if (hitSuccess && !bossInstance.active) { 
@@ -345,6 +380,14 @@ export default class GameScene extends Phaser.Scene {
             this.boss = null; 
             console.log("Boss vaincu, passage à la vague suivante (ou fin de monde).");
             this.time.delayedCall(1000, this.startNextWave, [], this);
+
+            if (this.currentWaveIndex >= this.currentWorldData.waves.length -1) {
+                console.log("C'était le boss final du monde.");
+                 this.add.text(this.cameras.main.width / 2, this.cameras.main.height/2 + 60, "BOSS VAINCU!", {font: '40px Arial', fill: '#0f0'}).setOrigin(0.5);
+                this.endGameSequence(true); 
+            } else {
+                this.time.delayedCall(1000, this.startNextWave, [], this); 
+            }
         }
     }
 
@@ -401,7 +444,7 @@ export default class GameScene extends Phaser.Scene {
                 if (keyDisplayName === " ") keyDisplayName = "SPACE";
             }
             const keyText = this.add.text(skillX + skillIconSize / 2, yPos + skillIconSize / 2 + 5, keyDisplayName, {
-                font: '12px PixelFont', fill: '#000', backgroundColor: '#fff', padding: {x:2, y:0}
+                font: '12px Arial', fill: '#000', backgroundColor: '#fff', padding: {x:2, y:0}
             }).setOrigin(0.5, 0).setScrollFactor(0);
 
 
@@ -461,7 +504,7 @@ export default class GameScene extends Phaser.Scene {
         this.updatePlayerHealthBar(); 
 
         this.playerHealthText = this.add.text(x + barWidth / 2, y + barHeight / 2, '', {
-            font: '14px PixelFont', fill: '#fff'
+            font: '14px Arial', fill: '#fff'
         }).setOrigin(0.5).setScrollFactor(0);
         this.updatePlayerHealthBar(); 
     }
@@ -485,7 +528,7 @@ export default class GameScene extends Phaser.Scene {
         this.bossHealthBar.setScrollFactor(0);
 
         this.bossNameText = this.add.text(x + barWidth / 2, y - 15, bossData.name.toUpperCase(), {
-            font: '18px PixelFont', fill: '#fff'
+            font: '18px Arial', fill: '#fff'
         }).setOrigin(0.5).setScrollFactor(0);
 
         this.updateBossHealthBar(); 
@@ -542,5 +585,37 @@ export default class GameScene extends Phaser.Scene {
         if (this.playerHealthText) {
             this.playerHealthText.setText(`${Math.max(0, Math.ceil(this.player.currentHp))} / ${this.player.maxHp}`);
         }
+    }
+
+    endGameSequence(isVictory = false) {
+        if (this.player.active) this.player.active = false; 
+
+        const coinsEarned = Math.floor(this.score * 0.1);
+        if (coinsEarned > 0) {
+            this.addManuCoins(coinsEarned);
+            let coinsText = this.add.text(
+                this.cameras.main.width / 2,
+                this.cameras.main.height / 2 + (isVictory ? 50 : 100), 
+                `+${coinsEarned} ManuCoins!`,
+                { font: '28px Arial', fill: '#FFD700', stroke: '#000', strokeThickness: 3 }
+            ).setOrigin(0.5);
+            this.time.delayedCall(2500, () => coinsText.destroy());
+        }
+        this.time.delayedCall(3000, () => {
+            console.log("GameScene: Attempting to start MenuScene from endGameSequence's delayedCall.");
+            if (this.scene && this.scene.key === 'GameScene' && this.scene.scene.manager.isActive(this.scene.key)) { 
+                this.scene.start('MenuScene');
+            } else {
+                console.warn("GameScene: Context lost or scene inactive, cannot start MenuScene reliably.");
+            }
+        }, [], this); 
+     }
+
+     addManuCoins(amount) {
+        if (amount <= 0) return;
+        let currentCoins = parseInt(localStorage.getItem('manuCoins')) || 0;
+        currentCoins += amount;
+        localStorage.setItem('manuCoins', currentCoins.toString());
+        console.log(`${amount} ManuCoins ajoutés. Total: ${currentCoins}`);
     }
 }
