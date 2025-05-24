@@ -1,5 +1,7 @@
 import { GAME_VERSION } from '../version.js';
 
+let menuSceneCreateCallCount = 0;
+
 export default class MenuScene extends Phaser.Scene {
     constructor() {
         super({ key: 'MenuScene' });
@@ -8,6 +10,9 @@ export default class MenuScene extends Phaser.Scene {
     }
 
     create() {
+        menuSceneCreateCallCount++;
+        console.log("MenuScene CREATE called. Attempting camera reset FIRST.");
+        this.cameras.resetAll();
         this.cameras.main.setBackgroundColor('#0A0E2F'); 
         let bgGraphics = this.add.graphics();
         bgGraphics.fillGradientStyle(0x0A0E2F, 0x0A0E2F, 0x1A1F4F, 0x1A1F4F, 1); 
@@ -94,24 +99,43 @@ export default class MenuScene extends Phaser.Scene {
 
     displayManuCoins() {
         let currentCoins = parseInt(localStorage.getItem('manuCoins')) || 0;
+        const textContent = `ManuCoins: ${currentCoins}`;
+        console.log(`MenuScene displayManuCoins: Preparing to display: ${textContent}`);
 
-        if (this.manuCoinsText) {
-            this.manuCoinsText.setText(`ManuCoins: ${currentCoins}`);
-        } else {
+        if (this.manuCoinsText && this.manuCoinsText.scene && this.manuCoinsText.active) {
+            console.log("MenuScene displayManuCoins: Destroying previous manuCoinsText object.", this.manuCoinsText);
+            this.manuCoinsText.destroy();
+            this.manuCoinsText = null; 
+        }
+
+        try {
+            console.log("MenuScene displayManuCoins: Attempting to create new text object.");
             this.manuCoinsText = this.add.text(
-                this.cameras.main.width - 20, 
-                20,                             
-                `ManuCoins: ${currentCoins}`,
+                this.cameras.main.width - 20,
+                20,
+                textContent,
                 {
-                    font: '24px Arial',
-                    fill: '#FFD700', 
+                    font: '24px Arial', 
+                    fill: '#FFD700',
                     align: 'right'
                 }
-            ).setOrigin(1, 0) 
-             .setScrollFactor(0);
+            );
+
+            if (this.manuCoinsText) {
+                console.log("MenuScene displayManuCoins: New text object CREATED. Applying setOrigin/setScrollFactor.");
+                this.manuCoinsText.setOrigin(1, 0).setScrollFactor(0);
+                console.log("MenuScene displayManuCoins: ManuCoins text fully set up:", this.manuCoinsText.text);
+            } else {
+                console.error("MenuScene displayManuCoins: this.add.text returned null or undefined!");
+            }
+        } catch (e) {
+            console.error("ERROR in MenuScene displayManuCoins during text creation/setup:", e);
+            if (e.stack) console.error(e.stack);
+            if (this.manuCoinsText) { 
+                this.manuCoinsText.destroy();
+                this.manuCoinsText = null;
+            }
         }
-        // if (this.manuCoinIcon) this.manuCoinIcon.destroy();
-        // this.manuCoinIcon = this.add.image(this.manuCoinsText.x - this.manuCoinsText.width - 5, this.manuCoinsText.y + this.manuCoinsText.height/2, 'manucoin_icon').setOrigin(1, 0.5).setScale(0.8).setScrollFactor(0);
     }
 
 
@@ -163,7 +187,6 @@ export default class MenuScene extends Phaser.Scene {
             this.manuCoinsText.destroy();
             this.manuCoinsText = null;
         }
-        // if (this.manuCoinIcon && this.manuCoinIcon.active) { this.manuCoinIcon.destroy(); this.manuCoinIcon = null; }
         if (this.titleText && this.titleText.active) { this.titleText.destroy(); this.titleText = null; }
         this.menuButtons.forEach(button => {
             if (button && button.active) button.destroy();

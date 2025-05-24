@@ -10,6 +10,9 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
+        this.setActive(true); 
+        this.setVisible(true);
+
         this.setCollideWorldBounds(true);
         this.body.setAllowGravity(false);
 
@@ -40,6 +43,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     update(cursors, shootKey, skillKeys, time) {
+        console.log("Player update called. Active:", this.active);
         if (!this.active) return;
 
         this.setVelocityX(0);

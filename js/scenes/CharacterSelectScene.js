@@ -179,4 +179,21 @@ export default class CharacterSelectScene extends Phaser.Scene {
         else if (this.selectedCharacterIndex >= this.charactersData.length) this.selectedCharacterIndex = 0;
         this.updateCharacterDisplay();
     }
+
+    shutdown() {
+        console.log("CharacterSelectScene shutdown called");
+        if (this.largeFullBodySprite) this.largeFullBodySprite.destroy();
+        if (this.characterNameText) this.characterNameText.destroy();
+        if (this.characterDescriptionText) this.characterDescriptionText.destroy();
+        if (this.skillTitleText) this.skillTitleText.destroy();
+        this.skillTexts.forEach(text => text.destroy());
+        this.topRowPortraits.forEach(p => p.destroy());
+        if (this.spotlight) this.spotlight.destroy(); 
+
+        console.log("CharacterSelectScene: Resetting cameras.");
+        this.cameras.resetAll(); 
+
+        this.tweens.killAll(); 
+        super.shutdown();
+    }
 }

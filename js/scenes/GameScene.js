@@ -50,6 +50,8 @@ export default class GameScene extends Phaser.Scene {
     }
 
     create() {
+        console.log("GameScene CREATE called. Attempting camera reset FIRST."); 
+        this.cameras.resetAll(); 
         this.gameEnded = false;
         this.gameData = this.registry.get('gameData');
         this.playerData = this.gameData.characters.find(char => char.id === this.selectedCharacterId);
@@ -71,6 +73,11 @@ export default class GameScene extends Phaser.Scene {
         this.cameras.main.setBackgroundColor('#2c3e50');
 
         this.player = new Player(this, this.cameras.main.width / 2, this.cameras.main.height - 50, this.playerData);
+
+        if (this.player) { 
+            this.player.setActive(true); 
+            this.player.setVisible(true); 
+        }
 
         this.cursors = this.input.keyboard.createCursorKeys();
         this.shootKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
@@ -115,43 +122,23 @@ export default class GameScene extends Phaser.Scene {
     }
 
     endGameSequence(isVictory = false) {
-        if (this.gameEnded) { 
-            console.log("endGameSequence: Already called, exiting.");
+        if (this.gameEnded) {
+            console.log("GameScene endGameSequence: Already called, exiting.");
             return;
         }
-        this.gameEnded = true; 
-        console.log("endGameSequence: Called. Victory:", isVictory);
-
+        this.gameEnded = true;
+        console.log("GameScene endGameSequence: Processing. Victory:", isVictory, "Final Score:", this.score);
 
         if (this.player && this.player.active) this.player.active = false;
 
-        const coinsEarned = Math.floor(this.score * 0.1);
-        if (coinsEarned > 0) {
-            this.addManuCoins(coinsEarned); 
-            let coinsText = this.add.text( /* ... */ ).setScrollFactor(0);
-            this.time.delayedCall(2500, () => { if (coinsText && coinsText.active) coinsText.destroy(); });
-        }
-
-        this.time.delayedCall(3000, () => {
-            console.log("GameScene: Delayed call to start MenuScene is executing.");
-            if (this.scene.systems.isActive()) { 
-                console.log("GameScene is still active, starting MenuScene.");
-                this.scene.start('MenuScene');
+        this.time.delayedCall(1500, () => { 
+            console.log("GameScene: Starting ResultsScene.");
+            if (this.scene && this.scene.systems && this.scene.systems.isActive()) {
+                this.scene.start('ResultsScene', { score: this.score, victory: isVictory });
             } else {
-                console.warn("GameScene is no longer active, MenuScene transition likely already handled or scene was shut down.");
+                console.warn("GameScene is no longer active, cannot start ResultsScene reliably.");
             }
-        }, [], this); 
-    }
-
-    update(time, delta) {
-        if (this.player && this.player.active) {
-            this.player.update(this.cursors, this.shootKey, this.skillKeys, time);
-        }
-        this.updateSkillUI(time);
-
-        if (this.boss && this.boss.active) {
-            this.boss.update(time, delta);
-        }
+        }, [], this);
     }
 
     startNextWave() {
@@ -489,25 +476,41 @@ export default class GameScene extends Phaser.Scene {
     }
 
     createPlayerHealthBar() {
-        const barWidth = 200;
-        const barHeight = 20;
-        const x = 20; 
-        const y = this.cameras.main.height - 40; 
+    const barWidth = 200;
+    const barHeight = 20;
+    const x = 20;
+    const y = this.cameras.main.height - 40;
+    const initialHpText = (this.player) ? `${Math.max(0, Math.ceil(this.player.currentHp))} / ${this.player.maxHp}` : 'HP: --/--';
 
-        this.playerHealthBarBg = this.add.graphics();
-        this.playerHealthBarBg.fillStyle(0x555555, 0.8); 
-        this.playerHealthBarBg.fillRect(x, y, barWidth, barHeight);
-        this.playerHealthBarBg.setScrollFactor(0); 
+    if (this.playerHealthBarBg && this.playerHealthBarBg.scene) this.playerHealthBarBg.destroy();
+    if (this.playerHealthBar && this.playerHealthBar.scene) this.playerHealthBar.destroy();
+    if (this.playerHealthText && this.playerHealthText.scene) this.playerHealthText.destroy();
+    this.playerHealthBarBg = null;
+    this.playerHealthBar = null;
+    this.playerHealthText = null;
 
-        this.playerHealthBar = this.add.graphics();
-        this.playerHealthBar.setScrollFactor(0);
-        this.updatePlayerHealthBar(); 
+    this.playerHealthBarBg = this.add.graphics(); 
+    this.playerHealthBarBg.fillStyle(0x555555, 0.8);
+    this.playerHealthBarBg.fillRect(x, y, barWidth, barHeight);
+    this.playerHealthBarBg.setScrollFactor(0);
 
-        this.playerHealthText = this.add.text(x + barWidth / 2, y + barHeight / 2, '', {
-            font: '14px Arial', fill: '#fff'
-        }).setOrigin(0.5).setScrollFactor(0);
-        this.updatePlayerHealthBar(); 
+    this.playerHealthBar = this.add.graphics();
+    this.playerHealthBar.setScrollFactor(0);
+
+    try {
+        console.log("GameScene createPlayerHealthBar: Attempting to create playerHealthText with content:", initialHpText);
+        this.playerHealthText = this.add.text(
+            x + barWidth / 2, y + barHeight / 2,
+            initialHpText,
+            { font: '14px Arial', fill: '#fff' }
+        ).setOrigin(0.5).setScrollFactor(0);
+        console.log("GameScene createPlayerHealthBar: playerHealthText CREATED.");
+    } catch (e) {
+        console.error("ERROR creating playerHealthText in createPlayerHealthBar:", e);
     }
+
+    this.updatePlayerHealthBar();
+}
 
     createBossHealthBar(bossData) {
         if (this.bossHealthBarBg) this.bossHealthBarBg.destroy();
@@ -532,6 +535,24 @@ export default class GameScene extends Phaser.Scene {
         }).setOrigin(0.5).setScrollFactor(0);
 
         this.updateBossHealthBar(); 
+    }
+
+    update(time, delta) {
+        if (this.gameEnded) { 
+            return;
+        }
+
+        if (this.player && this.player.active) {
+            this.player.update(this.cursors, this.shootKey, this.skillKeys, time);
+        } else if (this.player && !this.player.active && !this.gameEnded) {
+            console.log("Player not active during game update");
+        }
+
+        if (this.boss && this.boss.active) {
+            this.boss.update(time, delta);
+        }
+
+        this.updateSkillUI(time); 
     }
 
     updateBossHealthBar() {
@@ -562,15 +583,23 @@ export default class GameScene extends Phaser.Scene {
 
 
     updatePlayerHealthBar() {
-        if (!this.player || !this.playerHealthBar || !this.playerHealthBarBg) return;
+        if (!this.player || !this.playerHealthBarBg || !this.playerHealthBar) {
+            console.warn("updatePlayerHealthBar: Player or health bar elements missing."); // Décommente pour déboguer si besoin
+            return;
+        }
 
-        const barWidth = 200; 
+        this.playerHealthBarBg.setVisible(this.player.active); 
+        this.playerHealthBar.setVisible(this.player.active);
+        if (this.playerHealthText) this.playerHealthText.setVisible(this.player.active);
+
+
+        const barWidth = 200;
         const barHeight = 20;
         const x = 20;
         const y = this.cameras.main.height - 40;
 
-        this.playerHealthBar.clear();
-        const healthPercentage = this.player.currentHp / this.player.maxHp;
+        this.playerHealthBar.clear(); 
+        const healthPercentage = Math.max(0, this.player.currentHp) / this.player.maxHp; 
         const currentBarWidth = barWidth * healthPercentage;
 
         if (healthPercentage > 0.6) {
@@ -582,40 +611,33 @@ export default class GameScene extends Phaser.Scene {
         }
         this.playerHealthBar.fillRect(x, y, currentBarWidth, barHeight);
 
-        if (this.playerHealthText) {
-            this.playerHealthText.setText(`${Math.max(0, Math.ceil(this.player.currentHp))} / ${this.player.maxHp}`);
+        if (this.playerHealthText && this.playerHealthText.active) {
+            const hpText = (this.player) ? `${Math.max(0, Math.ceil(this.player.currentHp))} / ${this.player.maxHp}` : 'HP: --/--';
+            if (this.playerHealthText.text !== hpText) {
+            this.playerHealthText.setText(hpText);
+            }
+        } else if (this.playerHealthText && !this.playerHealthText.active) {
+            console.warn("updatePlayerHealthBar: playerHealthText exists but is not active.");
         }
     }
 
-    endGameSequence(isVictory = false) {
-        if (this.player.active) this.player.active = false; 
+    shutdown() {
+        console.log("CharacterSelectScene shutdown() EXECUTED.");
+        if (this.largeFullBodySprite && this.largeFullBodySprite.active) this.largeFullBodySprite.destroy();
+        if (this.characterNameText && this.characterNameText.active) this.characterNameText.destroy();
+        if (this.characterDescriptionText && this.characterDescriptionText.active) this.characterDescriptionText.destroy();
+        if (this.skillTitleText && this.skillTitleText.active) this.skillTitleText.destroy();
+        this.skillTexts.forEach(text => { if (text && text.active) text.destroy(); });
+        this.skillTexts = [];
+        this.topRowPortraits.forEach(p => { if (p && p.active) p.destroy(); });
+        this.topRowPortraits = [];
+        if (this.spotlight) this.spotlight.destroy(); 
 
-        const coinsEarned = Math.floor(this.score * 0.1);
-        if (coinsEarned > 0) {
-            this.addManuCoins(coinsEarned);
-            let coinsText = this.add.text(
-                this.cameras.main.width / 2,
-                this.cameras.main.height / 2 + (isVictory ? 50 : 100), 
-                `+${coinsEarned} ManuCoins!`,
-                { font: '28px Arial', fill: '#FFD700', stroke: '#000', strokeThickness: 3 }
-            ).setOrigin(0.5);
-            this.time.delayedCall(2500, () => coinsText.destroy());
-        }
-        this.time.delayedCall(3000, () => {
-            console.log("GameScene: Attempting to start MenuScene from endGameSequence's delayedCall.");
-            if (this.scene && this.scene.key === 'GameScene' && this.scene.scene.manager.isActive(this.scene.key)) { 
-                this.scene.start('MenuScene');
-            } else {
-                console.warn("GameScene: Context lost or scene inactive, cannot start MenuScene reliably.");
-            }
-        }, [], this); 
-     }
+        this.tweens.killAll(); 
 
-     addManuCoins(amount) {
-        if (amount <= 0) return;
-        let currentCoins = parseInt(localStorage.getItem('manuCoins')) || 0;
-        currentCoins += amount;
-        localStorage.setItem('manuCoins', currentCoins.toString());
-        console.log(`${amount} ManuCoins ajoutés. Total: ${currentCoins}`);
+        console.log("CharacterSelectScene: Resetting cameras.");
+        this.cameras.resetAll();
+
+        console.log("CharacterSelectScene shutdown completed.");
     }
 }
