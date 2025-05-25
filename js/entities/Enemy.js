@@ -166,17 +166,21 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (bullet) {
             bullet.setActive(true);
             bullet.setVisible(true);
+            let angle;
             if (!bullet.body) {
                 console.log(`Enemy ${this.texture.key}: Bullet has no body, adding physics.`);
                 this.scene.physics.add.existing(bullet); 
-            } 
+                angle = Phaser.Math.Angle.Between(this.x, this.y, this.playerTarget.x, this.playerTarget.y);
+            } else {
+                angle = Phaser.Math.Angle.Between(this.x, this.y, this.playerTarget.x, this.playerTarget.y);
+            }
             bullet.body.setAllowGravity(false);
             bullet.body.setCircle(bullet.width/2 * 0.8); 
             bullet.damage = this.enemyData.bulletDamage || 5;
-
-            const angle = Phaser.Math.Angle.Between(this.x, this.y, this.playerTarget.x, this.playerTarget.y);
+            
             this.scene.physics.velocityFromRotation(angle, 300 + Phaser.Math.Between(-30, 30), bullet.body.velocity);
         }
+
     }
 
     silence(duration) {

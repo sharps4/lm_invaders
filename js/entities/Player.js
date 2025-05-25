@@ -24,6 +24,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.currentBulletDamage = 10; 
 
         this.isInvulnerable = false; 
+        this.isInvisible = false;
         this.isDashing = false;      
         this.originalSpeed = playerData.baseStats.speed; 
         this.originalShootCooldown = playerData.baseStats.shootCooldown; 
@@ -185,10 +186,10 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
                 break;
 
             case 'l_homme_timide': 
+                this.isInvisible = true;
                 skill.isActive = true;  
                 this.isInvulnerable = true; 
                 this.setAlpha(0.2); 
-                skill.isActive = false;
                 break;
 
             case 'fiddlesticks': 
@@ -203,7 +204,6 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
                 this.speed = this.originalSpeed * skill.effect.speedMultiplier;
                 this.setScale(this.originalScale * skill.effect.sizeMultiplier);
                 this.setTint(0x8B0000); 
-                skill.isActive = false;
                 break;
 
             case 'le_cagibi':
@@ -281,6 +281,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
                             console.log("Clément - Fin Le Pilote: shootCooldown restauré:", this.shootCooldown);
                             break;
                         case 'l_homme_timide': 
+                            this.isInvisible = false;
                             this.isInvulnerable = false;
                             this.setAlpha(1);
                             break;
